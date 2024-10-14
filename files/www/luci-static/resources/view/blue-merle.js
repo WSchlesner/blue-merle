@@ -356,21 +356,23 @@ function handleRandomizeSSID(ev) {
     var button = ev.target;
     button.textContent = "Loading...";
 
-    try {
-        // Execute local script
-        fs.exec('/etc/init.d/blue-merle-ssid', command);
+    // Execute local script
+    fs.exec('/etc/init.d/blue-merle-ssid', command, function(err) {
+        if (err) {
+            console.error("Failed to execute command: ", err);
+            button.textContent = "Error";
+            return;
+        }
 
         // Toggle state
         state = !state;
+        randomizeSSID = state;
 
         // Update button appearance and localStorage
         button.textContent = state ? "Disable SSID" : "Enable SSID";
         button.className = 'btn cbi-button ' + (state ? 'cbi-button-positive' : '');
         localStorage.setItem('randomizeSSID', state);
-    } catch (error) {
-        console.error("Failed to execute command: ", error);
-        button.textContent = "Error";
-    }
+    });
 }
 
 function handleRandomizePassword(ev) {
@@ -381,21 +383,23 @@ function handleRandomizePassword(ev) {
     var button = ev.target;
     button.textContent = "Loading...";
 
-    try {
-        // Execute local script
-        fs.exec('/etc/init.d/blue-merle-password', command);
+    // Execute local script
+    fs.exec('/etc/init.d/blue-merle-password', command, function(err) {
+        if (err) {
+            console.error("Failed to execute command: ", err);
+            button.textContent = "Error";
+            return;
+        }
 
         // Toggle state
         state = !state;
+        randomizePassword = state;
 
         // Update button appearance and localStorage
         button.textContent = state ? "Disable Password" : "Enable Password";
         button.className = 'btn cbi-button ' + (state ? 'cbi-button-positive' : '');
         localStorage.setItem('randomizePassword', state);
-    } catch (error) {
-        console.error("Failed to execute command: ", error);
-        button.textContent = "Error";
-    }
+    });
 }
 
 function handleRandomizeHostname(ev) {
@@ -406,21 +410,23 @@ function handleRandomizeHostname(ev) {
     var button = ev.target;
     button.textContent = "Loading...";
 
-    try {
-        // Execute local script
-        fs.exec('/etc/init.d/blue-merle-hostname', command);
+    // Execute local script
+    fs.exec('/etc/init.d/blue-merle-hostname', command, function(err) {
+        if (err) {
+            console.error("Failed to execute command: ", err);
+            button.textContent = "Error";
+            return;
+        }
 
         // Toggle state
         state = !state;
+        randomizeHostname = state;
 
         // Update button appearance and localStorage
         button.textContent = state ? "Disable Hostname" : "Enable Hostname";
         button.className = 'btn cbi-button ' + (state ? 'cbi-button-positive' : '');
         localStorage.setItem('randomizeHostname', state);
-    } catch (error) {
-        console.error("Failed to execute command: ", error);
-        button.textContent = "Error";
-    }
+    });
 }
 
 return view.extend({
