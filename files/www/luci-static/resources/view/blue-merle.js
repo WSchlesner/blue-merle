@@ -357,9 +357,9 @@ function handleRandomizeSSID(ev) {
     button.textContent = "Loading...";
 
     // Execute local script
-    fs.exec('/etc/init.d/blue-merle-ssid', [command], function(err) {
+    fs.exec_direct('/etc/init.d/blue-merle-ssid ' + command, function(err, stdout, stderr) {
         if (err) {
-            console.error("Failed to execute command: ", err);
+            console.error("Failed to execute command: ", stderr);
             button.textContent = "Error";
             return;
         }
@@ -384,9 +384,9 @@ function handleRandomizePassword(ev) {
     button.textContent = "Loading...";
 
     // Execute local script
-    fs.exec('/etc/init.d/blue-merle-password', [command], function(err) {
+    fs.exec_direct('/etc/init.d/blue-merle-password ' + command, function(err, stdout, stderr) {
         if (err) {
-            console.error("Failed to execute command: ", err);
+            console.error("Failed to execute command: ", stderr);
             button.textContent = "Error";
             return;
         }
@@ -411,9 +411,9 @@ function handleRandomizeHostname(ev) {
     button.textContent = "Loading...";
 
     // Execute local script
-    fs.exec('/etc/init.d/blue-merle-hostname', [command], function(err) {
+    fs.exec_direct('/etc/init.d/blue-merle-hostname ' + command, function(err, stdout, stderr) {
         if (err) {
-            console.error("Failed to execute command: ", err);
+            console.error("Failed to execute command: ", stderr);
             button.textContent = "Error";
             return;
         }
