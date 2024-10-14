@@ -347,55 +347,80 @@ var randomizeSSID = localStorage.getItem('randomizeSSID') === 'true';
 var randomizePassword = localStorage.getItem('randomizePassword') === 'true';
 var randomizeHostname = localStorage.getItem('randomizeHostname') === 'true';
 
-// Function to create and append buttons
-function createButton(id, type, handler) {
-    var button = document.createElement("button");
-    button.id = id;
-    button.className = "btn cbi-button " + (eval('randomize' + type) ? 'cbi-button-positive' : '');
-    button.textContent = eval('randomize' + type) ? "Disable " + type : "Enable " + type;
-    var container = document.getElementById("toggle-button-container");
-    if (container) {
-        container.appendChild(button);
-    }
-    button.addEventListener("click", handler);
-}
-
 // Functions to handle randomization actions
-function handleRandomize(type, script) {
-    var state = eval('randomize' + type);
+function handleRandomizeSSID(ev) {
+    var state = randomizeSSID;
     var command = state ? ['disable'] : ['enable'];
 
     // Show loading indicator
-    var button = document.getElementById('toggle' + type);
+    var button = ev.target;
     button.textContent = "Loading...";
 
     try {
         // Execute local script
-        fs.exec('/etc/init.d/blue-merle-' + script, command);
+        fs.exec('/etc/init.d/blue-merle-ssid', command);
 
         // Toggle state
         state = !state;
 
         // Update button appearance and localStorage
-        button.textContent = state ? "Disable " + type : "Enable " + type;
+        button.textContent = state ? "Disable SSID" : "Enable SSID";
         button.className = 'btn cbi-button ' + (state ? 'cbi-button-positive' : '');
-        localStorage.setItem('randomize' + type, state);
+        localStorage.setItem('randomizeSSID', state);
     } catch (error) {
         console.error("Failed to execute command: ", error);
         button.textContent = "Error";
     }
 }
 
-function handleRandomizeSSID(ev) {
-    handleRandomize('SSID', 'ssid');
-}
-
 function handleRandomizePassword(ev) {
-    handleRandomize('Password', 'password');
+    var state = randomizePassword;
+    var command = state ? ['disable'] : ['enable'];
+
+    // Show loading indicator
+    var button = ev.target;
+    button.textContent = "Loading...";
+
+    try {
+        // Execute local script
+        fs.exec('/etc/init.d/blue-merle-password', command);
+
+        // Toggle state
+        state = !state;
+
+        // Update button appearance and localStorage
+        button.textContent = state ? "Disable Password" : "Enable Password";
+        button.className = 'btn cbi-button ' + (state ? 'cbi-button-positive' : '');
+        localStorage.setItem('randomizePassword', state);
+    } catch (error) {
+        console.error("Failed to execute command: ", error);
+        button.textContent = "Error";
+    }
 }
 
 function handleRandomizeHostname(ev) {
-    handleRandomize('Hostname', 'hostname');
+    var state = randomizeHostname;
+    var command = state ? ['disable'] : ['enable'];
+
+    // Show loading indicator
+    var button = ev.target;
+    button.textContent = "Loading...";
+
+    try {
+        // Execute local script
+        fs.exec('/etc/init.d/blue-merle-hostname', command);
+
+        // Toggle state
+        state = !state;
+
+        // Update button appearance and localStorage
+        button.textContent = state ? "Disable Hostname" : "Enable Hostname";
+        button.className = 'btn cbi-button ' + (state ? 'cbi-button-positive' : '');
+        localStorage.setItem('randomizeHostname', state);
+    } catch (error) {
+        console.error("Failed to execute command: ", error);
+        button.textContent = "Error";
+    }
 }
 
 return view.extend({
@@ -435,10 +460,18 @@ return view.extend({
                 E('label', {}, _('Randomize') + ':'),
                 ' ',
                 E('span', { 'class': 'control-group' }, [
-                    // Adding buttons using createButton function
-                    createButton('toggleSSID', 'SSID', handleRandomizeSSID),
-                    createButton('togglePassword', 'Password', handleRandomizePassword),
-                    createButton('toggleHostname', 'Hostname', handleRandomizeHostname),
+                    E('button', {
+                        'class': 'btn cbi-button ' + (randomizeSSID ? 'cbi-button-positive' : ''),
+                        'click': handleRandomizeSSID
+                    }, [ _('Randomize SSID') ]),
+                    E('button', {
+                        'class': 'btn cbi-button ' + (randomizePassword ? 'cbi-button-positive' : ''),
+                        'click': handleRandomizePassword
+                    }, [ _('Randomize Password') ]),
+                    E('button', {
+                        'class': 'btn cbi-button ' + (randomizeHostname ? 'cbi-button-positive' : ''),
+                        'click': handleRandomizeHostname
+                    }, [ _('Randomize Hostname') ]),
                 ])
             ]),
         ]);
@@ -465,3 +498,4 @@ return view.extend({
     handleSave: null,
     handleSaveApply: null,
     handleReset: null
+});
