@@ -2,36 +2,77 @@
 
 # This script provides helper functions for blue-merle
 
-
 UNICAST_MAC_GEN () {
     loc_mac_numgen=`python3 -c "import random; print(f'{random.randint(0,2**48) & 0b111111101111111111111111111111111111111111111111:0x}'.zfill(12))"`
     loc_mac_formatted=$(echo "$loc_mac_numgen" | sed 's/^\(..\)\(..\)\(..\)\(..\)\(..\)\(..\).*$/\1:\2:\3:\4:\5:\6/')
     echo "$loc_mac_formatted"
 }
 
-# randomize BSSID
-RESET_BSSIDS () {
-    uci set wireless.@wifi-iface[1].macaddr=`UNICAST_MAC_GEN`
-    uci set wireless.@wifi-iface[0].macaddr=`UNICAST_MAC_GEN`
-    uci commit wireless
-    # you need to reset wifi for changes to apply, i.e. executing "wifi"
-}
-
-
+#Randomize BSSID & MAC Addrs
 RANDOMIZE_MACADDR () {
     # This changes the MAC address clients see when connecting to the WiFi spawned by the device.
     # You can check with "arp -a" that your endpoint, e.g. your laptop, sees a different MAC after a reboot of the Mudi.
-    uci set network.@device[1].macaddr=`UNICAST_MAC_GEN`
-    # Here we change the MAC address the upstream wifi sees
-    uci set glconfig.general.macclone_addr=`UNICAST_MAC_GEN`
+    uci set network.@device[1].macaddr=$(UNICAST_MAC_GEN)
+    # Here we change the MAC address the upstream WiFi sees
+    uci set glconfig.general.macclone_addr=$(UNICAST_MAC_GEN)
     uci commit network
-    # You need to restart the network, i.e. /etc/init.d/network restart
+    # Changing the BSSID/MAC on the WiFi Interfaces
+    uci set wireless.@wifi-iface[0].macaddr=$(UNICAST_MAC_GEN)
+    uci set wireless.@wifi-iface[1].macaddr=$(UNICAST_MAC_GEN)
+    # Get all interfaces exactly matching "sta" from the uci show command
+    stainterfaces=$(uci show wireless | grep -E '\.sta=' | cut -d'.' -f2 | cut -d'=' -f1 | uniq)
+    # Loop through each sta interface
+    for iface in $stainterfaces; do    
+        uci set wireless.$iface.macaddr=$(UNICAST_MAC_GEN)
+    done
+}
+    
+#Generate Pseudo Random SSID for WiFi Interfaces
+RANDOMIZE_SSID() {
+    NEW_SSID="Mudi_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 5)"
+    uci set wireless.@wifi-iface[0].ssid="$NEW_SSID"
+    uci set wireless.@wifi-iface[1].ssid="$NEW_SSID"
+}
+
+#Randomzie Password for the WiFi Interfaces
+RANDOMIZE_PASSWORD(){
+    #Generate Random Password for WiFi Interfaces
+    NEW_PASSWORD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8)
+    uci set wireless.@wifi-iface[0].key="$NEW_PASSWORD"
+    uci set wireless.@wifi-iface[1].key="$NEW_PASSWORD"
+}
+
+#Randomize Hostname
+RANDOMIZE_HOSTNAME(){
+    RANDOM_SUFFIX=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 4)
+    NEW_HOSTNAME="Mudi_$RANDOM_SUFFIX"
+    echo $NEW_HOSTNAME > /proc/sys/kernel/hostname
+    uci set system.@system[0].hostname="$NEW_HOSTNAME"
+    uci commit system
+    /etc/init.d/log restart
+}
+
+#Shutdown WiFi Interfaces
+WIFI_DOWN(){
+	wifi down
+}
+
+#Reload WiFi Interfaces, DNSMasq, and Network
+WIFI_RELOAD(){
+	wifi commit wireless
+    sleep 1
+    wifi reload
+    sleep 2
+    wifi up
+    sleep 2
+    /etc/init.d/dnsmasq restart
+    sleep 5
+    /etc/init.d/network restart
 }
 
 READ_ICCID() {
     gl_modem AT AT+CCID
 }
-
 
 READ_IMEI () {
 	local answer=1
@@ -76,7 +117,6 @@ READ_IMSI () {
 	done
 	echo $imsi
 }
-
 
 GENERATE_IMEI() {
     local seed=$(head -100 /dev/urandom | tr -dc "0123456789" | head -c10)

@@ -1,0 +1,13 @@
+#!/bin/sh /etc/rc.common
+
+. /lib/blue-merle/functions.sh
+
+START=11
+STOP=99
+
+start(){
+    WIFI_RELOAD
+}
+stop(){
+    echo "Stopping WiFi Restore Service"
+}

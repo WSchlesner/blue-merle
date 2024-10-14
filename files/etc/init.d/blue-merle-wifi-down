@@ -1,0 +1,13 @@
+#!/bin/sh /etc/rc.common
+
+. /lib/blue-merle/functions.sh
+
+START=9
+STOP=99
+
+start(){
+    WIFI_DOWN
+}
+stop(){
+    echo "Stopping WiFi Shutdown Service"
+}

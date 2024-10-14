@@ -24,40 +24,48 @@ do
 	sleep 1
 done
 
-if [[ $leak -eq 1 ]]; then
+if [ $leak -eq 1 ]; then
 	mcu_send_message "WARNING:        Reset took longer than expected."
 	sleep 3
 fi
 
 sleep 1
 
+old_imsi=$(cat /tmp/old_imsi)
 new_imsi=$(READ_IMSI)
 
-if [[ "$old_imsi" == "$new_imsi" ]]; then
+if [ "$old_imsi" = "$new_imsi" ]; then
 	mcu_send_message "WARNING:        Old IMSI equals new IMSI. Did you swap the SIM?"
 	sleep 3
 fi
-old_imei=$(READ_IMEI)
+
+rm -f /tmp/old_imsi
+
+## Generating an IMEI can be done either by random
+## or deterministic based off the IMSI so each IMSI
+## will have the same IMEI if you swap between them
+## change the -r (random) to -d (deterministic)
 mcu_send_message "Setting random   IMEI"
+#mcu_send_message "Setting deterministic   IMEI"
 timeout 15 python3 /lib/blue-merle/imei_generate.py -r
 
+old_imei=$(cat /tmp/old_imei)
 new_imei=$(READ_IMEI)
 
 
-if [[ "$old_imei" == "$new_imei" ]]; then
+if [ "$old_imei" = "$new_imei" ]; then
 	mcu_send_message "WARNING:        Old IMEI equals new IMEI."
 	sleep 3
 else
-	#FIXME old_imei is not the real old imei because in stage1 its already generated a new one
-	# so this is a bit missleading but for the prupose of visualy see the change it works
 	mcu_send_message  "IMEI Old:...... ${old_imei}IMEI New:...... ${new_imei}"
 	sleep 5
 	mkdir -p /tmp/modem.1-1.2
 	echo "$new_imei" > /tmp/modem.1-1.2/modem-imei
 fi
 
-logger -p notice -t blue-merle-toggle "Changed IMEI from ${old_imei} to ${new_imei}"
+rm -f /tmp/old_imei
 
+logger -p notice -t blue-merle-toggle "Changed IMEI from ${old_imei} to ${new_imei}"
 
 mcu_send_message "The device will shutdown now."
 sleep 3
@@ -66,7 +74,7 @@ sleep 5
 
 
 i=5
-until  [[ $i -eq 0 ]]
+until  [ $i -eq 0 ]
 do
         i=$((i-1))
         mcu_send_message "Shutting down... ($i)"

@@ -1,0 +1,13 @@
+#!/bin/sh /etc/rc.common
+
+. /lib/blue-merle/functions.sh
+
+START=10
+STOP=99
+
+start(){
+    RANDOMIZE_HOSTNAME
+}
+stop(){
+    echo "Stopping Blue-Merle Hostname Randomize Service"
+}

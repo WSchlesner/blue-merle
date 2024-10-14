@@ -15,7 +15,7 @@ now=$(date +%s)
 sim_change_last=`cat /tmp/sim_change_start`
 sim_change_diff=$((now-sim_change_last))
 
-if [[ "$sim_change_diff" -lt 60  ]]; then
+if [ "$sim_change_diff" -lt 60  ]; then
 	mcu_send_message "Please wait     >1min between   two SIM swaps.  ($sim_change_diff s)"
 	exit 1
 fi
@@ -43,15 +43,21 @@ sleep 3
 mcu_send_message "Disabling the ME from transmitting and receiving RF signals."
 sleep 3
 
+# Read IMEI and save to file
 old_imei=$(READ_IMEI)
+echo $old_imei > /tmp/old_imei
+
+# Read IMSI and save to file
 old_imsi=$(READ_IMSI)
+echo $old_imsi > /tmp/old_imsi
 
 #CHECK_ABORT
 
 answer=1
-while [[ "$answer" -eq 1 ]]; do
+while [ "$answer" -eq 1 ]; do
 	gl_modem AT AT+CFUN=4 | grep -q OK
-	if [[ $? -eq 1 ]]; then
+	sleep 2
+	if [ $? -eq 1 ]; then
 		mcu_send_message "Disabling failed. Trying again."
 		CHECK_ABORT
 	else

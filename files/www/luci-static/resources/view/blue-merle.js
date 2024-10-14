@@ -338,8 +338,58 @@ function handleUpload(ev)
 {
 }
 
+function handleInput(ev)
+{
+}
 
-function handleInput(ev) {
+// Initialize variables from localStorage
+var randomizeSSID = localStorage.getItem('randomizeSSID') === 'true';
+var randomizePassword = localStorage.getItem('randomizePassword') === 'true';
+var randomizeHostname = localStorage.getItem('randomizeHostname') === 'true';
+
+function handleRandomizeSSID(ev) {
+    if (randomizeSSID) {
+        fs.exec('/etc/init.d/blue-merle-ssid', ['disable']);
+        randomizeSSID = false;
+    } else {
+        fs.exec('/etc/init.d/blue-merle-ssid', ['enable']);
+        randomizeSSID = true;
+    }
+    // Update the button's appearance
+    var button = ev.target;
+    button.className = 'btn cbi-button ' + (randomizeSSID ? 'cbi-button-positive' : '');
+    // Store the state in localStorage
+    localStorage.setItem('randomizeSSID', randomizeSSID);
+}
+
+function handleRandomizePassword(ev) {
+    if (randomizePassword) {
+        fs.exec('/etc/init.d/blue-merle-password', ['disable']);
+        randomizePassword = false;
+    } else {
+        fs.exec('/etc/init.d/blue-merle-password', ['enable']);
+        randomizePassword = true;
+    }
+    // Update the button's appearance
+    var button = ev.target;
+    button.className = 'btn cbi-button ' + (randomizePassword ? 'cbi-button-positive' : '');
+    // Store the state in localStorage
+    localStorage.setItem('randomizePassword', randomizePassword);
+}
+
+function handleRandomizeHostname(ev) {
+    if (randomizeHostname) {
+        fs.exec('/etc/init.d/blue-merle-hostname', ['disable']);
+        randomizeHostname = false;
+    } else {
+        fs.exec('/etc/init.d/blue-merle-hostname', ['enable']);
+        randomizeHostname = true;
+    }
+    // Update the button's appearance
+    var button = ev.target;
+    button.className = 'btn cbi-button ' + (randomizeHostname ? 'cbi-button-positive' : '');
+    // Store the state in localStorage
+    localStorage.setItem('randomizeHostname', randomizeHostname);
 }
 
 return view.extend({
@@ -373,7 +423,7 @@ return view.extend({
 						E('input', { 'id':imsiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength':14, 'maxlenght':14, 'required':true, 'value': query, 'input': handleInput, 'disabled': true })
 						//, E('button', { 'class': 'btn cbi-button', 'click': handleReset }, [ _('Clear') ])
 					])
-				]),
+				])
 			]),
 
 			E('div', {}, [
@@ -383,7 +433,25 @@ return view.extend({
 					//, E('button', { 'class': 'btn cbi-button-action', 'click': handleUpload, 'disabled': isReadonlyView }, [ _('IMEI change…') ]), ' '
 					//, E('button', { 'class': 'btn cbi-button-neutral', 'click': handleConfig }, [ _('Shred config…') ])
 				])
-			])
+			]),
+			E('br'),
+			E('div', {}, [
+				E('label', {}, _('Randomize') + ':'), ' ',
+				E('span', { 'class': 'control-group' }, [
+					E('button', {
+						'class': 'btn cbi-button ' + (randomizeSSID ? 'cbi-button-positive' : ''),
+						'click': handleRandomizeSSID
+					}, [ _('Randomize SSID') ]),
+					E('button', {
+						'class': 'btn cbi-button ' + (randomizePassword ? 'cbi-button-positive' : ''),
+						'click': handleRandomizePassword
+					}, [ _('Randomize Password') ]),
+					E('button', {
+						'class': 'btn cbi-button ' + (randomizeHostname ? 'cbi-button-positive' : ''),
+						'click': handleRandomizeHostname
+					}, [ _('Randomize Hostname') ]),
+				])
+			]),
 
 		]);
 
