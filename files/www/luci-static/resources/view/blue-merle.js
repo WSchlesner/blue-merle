@@ -347,142 +347,121 @@ var randomizeSSID = localStorage.getItem('randomizeSSID') === 'true';
 var randomizePassword = localStorage.getItem('randomizePassword') === 'true';
 var randomizeHostname = localStorage.getItem('randomizeHostname') === 'true';
 
-function handleRandomizeSSID(ev) {
-    if (randomizeSSID) {
-        fs.exec('/etc/init.d/blue-merle-ssid', ['disable']);
-        randomizeSSID = false;
-    } else {
-        fs.exec('/etc/init.d/blue-merle-ssid', ['enable']);
-        randomizeSSID = true;
+// Function to create and append buttons
+function createButton(id, type, handler) {
+    var button = document.createElement("button");
+    button.id = id;
+    button.className = "btn cbi-button " + (eval('randomize' + type) ? 'cbi-button-positive' : '');
+    button.textContent = eval('randomize' + type) ? "Disable " + type : "Enable " + type;
+    var container = document.getElementById("toggle-button-container");
+    if (container) {
+        container.appendChild(button);
     }
-    // Update the button's appearance
-    var button = ev.target;
-    button.className = 'btn cbi-button ' + (randomizeSSID ? 'cbi-button-positive' : '');
-    // Store the state in localStorage
-    localStorage.setItem('randomizeSSID', randomizeSSID);
+    button.addEventListener("click", handler);
+}
+
+// Functions to handle randomization actions
+function handleRandomize(type, script) {
+    var state = eval('randomize' + type);
+    var command = state ? ['disable'] : ['enable'];
+
+    // Show loading indicator
+    var button = document.getElementById('toggle' + type);
+    button.textContent = "Loading...";
+
+    try {
+        // Execute local script
+        fs.exec('/etc/init.d/blue-merle-' + script, command);
+
+        // Toggle state
+        state = !state;
+
+        // Update button appearance and localStorage
+        button.textContent = state ? "Disable " + type : "Enable " + type;
+        button.className = 'btn cbi-button ' + (state ? 'cbi-button-positive' : '');
+        localStorage.setItem('randomize' + type, state);
+    } catch (error) {
+        console.error("Failed to execute command: ", error);
+        button.textContent = "Error";
+    }
+}
+
+function handleRandomizeSSID(ev) {
+    handleRandomize('SSID', 'ssid');
 }
 
 function handleRandomizePassword(ev) {
-    if (randomizePassword) {
-        fs.exec('/etc/init.d/blue-merle-password', ['disable']);
-        randomizePassword = false;
-    } else {
-        fs.exec('/etc/init.d/blue-merle-password', ['enable']);
-        randomizePassword = true;
-    }
-    // Update the button's appearance
-    var button = ev.target;
-    button.className = 'btn cbi-button ' + (randomizePassword ? 'cbi-button-positive' : '');
-    // Store the state in localStorage
-    localStorage.setItem('randomizePassword', randomizePassword);
+    handleRandomize('Password', 'password');
 }
 
 function handleRandomizeHostname(ev) {
-    if (randomizeHostname) {
-        fs.exec('/etc/init.d/blue-merle-hostname', ['disable']);
-        randomizeHostname = false;
-    } else {
-        fs.exec('/etc/init.d/blue-merle-hostname', ['enable']);
-        randomizeHostname = true;
-    }
-    // Update the button's appearance
-    var button = ev.target;
-    button.className = 'btn cbi-button ' + (randomizeHostname ? 'cbi-button-positive' : '');
-    // Store the state in localStorage
-    localStorage.setItem('randomizeHostname', randomizeHostname);
+    handleRandomize('Hostname', 'hostname');
 }
 
 return view.extend({
-	load: function() {
-	},
+    load: function() {},
 
-	render: function(listData) {
-		var query = decodeURIComponent(L.toArray(location.search.match(/\bquery=([^=]+)\b/))[1] || '');
-
+    render: function(listData) {
+        var query = decodeURIComponent(L.toArray(location.search.match(/\bquery=([^=]+)\b/))[1] || '');
         const imeiInputID = 'imei-input';
         const imsiInputID = 'imsi-input';
 
-		var view = E([], [
-			E('style', { 'type': 'text/css' }, [ css ]),
+        var view = E([], [
+            E('style', { 'type': 'text/css' }, [ css ]),
+            E('h2', {}, _('Blue Merle')),
+            E('div', { 'class': 'controls' }, [
+                E('div', {}, [
+                    E('label', {}, _('IMEI') + ':'),
+                    E('span', { 'class': 'control-group' }, [
+                        E('input', { 'id': imeiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength': 14, 'maxlength': 14, 'required': true, 'value': query, 'input': handleInput, 'disabled': true })
+                    ])
+                ]),
+                E('div', {}, [
+                    E('label', {}, _('IMSI') + ':'),
+                    E('span', { 'class': 'control-group' }, [
+                        E('input', { 'id': imsiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength': 14, 'maxlength': 14, 'required': true, 'value': query, 'input': handleInput, 'disabled': true })
+                    ])
+                ])
+            ]),
+            E('div', {}, [
+                E('label', {}, _('Actions') + ':'),
+                ' ',
+                E('span', { 'class': 'control-group' }, [
+                    E('button', { 'class': 'btn cbi-button-positive', 'data-command': 'update', 'click': handleSimSwap, 'disabled': isReadonlyView }, [ _('SIM swap…') ]),
+                ])
+            ]),
+            E('br'),
+            E('div', {}, [
+                E('label', {}, _('Randomize') + ':'),
+                ' ',
+                E('span', { 'class': 'control-group' }, [
+                    // Adding buttons using createButton function
+                    createButton('toggleSSID', 'SSID', handleRandomizeSSID),
+                    createButton('togglePassword', 'Password', handleRandomizePassword),
+                    createButton('toggleHostname', 'Hostname', handleRandomizeHostname),
+                ])
+            ]),
+        ]);
 
-			E('h2', {}, _('Blue Merle')),
+        readIMEI().then(function(imei) {
+            const e = document.getElementById(imeiInputID);
+            console.log("Input: ", e, e.placeholder, e.value);
+            e.value = imei;
+        }).catch(function(err) {
+            console.log("Error: ", err);
+        });
 
-			E('div', { 'class': 'controls' }, [
-				E('div', {}, [
-					E('label', {}, _('IMEI') + ':'),
-					E('span', { 'class': 'control-group' }, [
-						E('input', { 'id':imeiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength':14, 'maxlenght':14, 'required':true, 'value': query, 'input': handleInput, 'disabled': true })
-						//, E('button', { 'class': 'btn cbi-button', 'click': handleReset }, [ _('Clear') ])
-						//, E('button', { 'class': 'btn cbi-button', 'click': randomIMEI }, [ _('Set Random') ])
-					])
-				]),
+        readIMSI().then(function(imsi) {
+            const e = document.getElementById(imsiInputID);
+            e.value = imsi;
+        }).catch(function(err) {
+            const e = document.getElementById(imsiInputID);
+            e.value = "No IMSI found";
+        });
 
-				E('div', {}, [
-					E('label', {}, _('IMSI') + ':'),
-					E('span', { 'class': 'control-group' }, [
-						E('input', { 'id':imsiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength':14, 'maxlenght':14, 'required':true, 'value': query, 'input': handleInput, 'disabled': true })
-						//, E('button', { 'class': 'btn cbi-button', 'click': handleReset }, [ _('Clear') ])
-					])
-				])
-			]),
+        return view;
+    },
 
-			E('div', {}, [
-				E('label', {}, _('Actions') + ':'), ' ',
-				E('span', { 'class': 'control-group' }, [
-					E('button', { 'class': 'btn cbi-button-positive', 'data-command': 'update', 'click': handleSimSwap, 'disabled': isReadonlyView }, [ _('SIM swap…') ]), ' '
-					//, E('button', { 'class': 'btn cbi-button-action', 'click': handleUpload, 'disabled': isReadonlyView }, [ _('IMEI change…') ]), ' '
-					//, E('button', { 'class': 'btn cbi-button-neutral', 'click': handleConfig }, [ _('Shred config…') ])
-				])
-			]),
-			E('br'),
-			E('div', {}, [
-				E('label', {}, _('Randomize') + ':'), ' ',
-				E('span', { 'class': 'control-group' }, [
-					E('button', {
-						'class': 'btn cbi-button ' + (randomizeSSID ? 'cbi-button-positive' : ''),
-						'click': handleRandomizeSSID
-					}, [ _('Randomize SSID') ]),
-					E('button', {
-						'class': 'btn cbi-button ' + (randomizePassword ? 'cbi-button-positive' : ''),
-						'click': handleRandomizePassword
-					}, [ _('Randomize Password') ]),
-					E('button', {
-						'class': 'btn cbi-button ' + (randomizeHostname ? 'cbi-button-positive' : ''),
-						'click': handleRandomizeHostname
-					}, [ _('Randomize Hostname') ]),
-				])
-			]),
-
-		]);
-
-		readIMEI().then(
-		    function(imei) {
-		        const e = document.getElementById(imeiInputID);
-		        console.log("Input: ", e, e.placeholder, e.value);
-		        e.value = imei;
-		    }
-		).catch(
-		    function(err){
-		        console.log("Error: ", err)
-		    }
-		)
-
-		readIMSI().then(
-		    function(imsi) {
-		        const e = document.getElementById(imsiInputID);
-		        e.value = imsi;
-		    }
-		).catch(
-		    function(err){
-		        const e = document.getElementById(imsiInputID);
-		        e.value = "No IMSI found";
-		    }
-		)
-
-		return view;
-	},
-
-	handleSave: null,
-	handleSaveApply: null,
-	handleReset: null
-});
+    handleSave: null,
+    handleSaveApply: null,
+    handleReset: null
