@@ -350,14 +350,14 @@ var randomizeHostname = localStorage.getItem('randomizeHostname') === 'true';
 // Functions to handle randomization actions
 function handleRandomizeSSID(ev) {
     var state = randomizeSSID;
-    var command = state ? ['disable'] : ['enable'];
+    var command = state ? 'disable' : 'enable';
 
     // Show loading indicator
     var button = ev.target;
     button.textContent = "Loading...";
 
     // Execute local script
-    fs.exec('/etc/init.d/blue-merle-ssid', command, function(err) {
+    fs.exec('/etc/init.d/blue-merle-ssid', [command], function(err) {
         if (err) {
             console.error("Failed to execute command: ", err);
             button.textContent = "Error";
@@ -377,14 +377,14 @@ function handleRandomizeSSID(ev) {
 
 function handleRandomizePassword(ev) {
     var state = randomizePassword;
-    var command = state ? ['disable'] : ['enable'];
+    var command = state ? 'disable' : 'enable';
 
     // Show loading indicator
     var button = ev.target;
     button.textContent = "Loading...";
 
     // Execute local script
-    fs.exec('/etc/init.d/blue-merle-password', command, function(err) {
+    fs.exec('/etc/init.d/blue-merle-password', [command], function(err) {
         if (err) {
             console.error("Failed to execute command: ", err);
             button.textContent = "Error";
@@ -404,14 +404,14 @@ function handleRandomizePassword(ev) {
 
 function handleRandomizeHostname(ev) {
     var state = randomizeHostname;
-    var command = state ? ['disable'] : ['enable'];
+    var command = state ? 'disable' : 'enable';
 
     // Show loading indicator
     var button = ev.target;
     button.textContent = "Loading...";
 
     // Execute local script
-    fs.exec('/etc/init.d/blue-merle-hostname', command, function(err) {
+    fs.exec('/etc/init.d/blue-merle-hostname', [command], function(err) {
         if (err) {
             console.error("Failed to execute command: ", err);
             button.textContent = "Error";
