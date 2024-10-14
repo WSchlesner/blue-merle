@@ -369,8 +369,9 @@ function handleRandomize(ev, service, commandPrefix) {
         // Enable button after update
         button.disabled = false;
     }).catch(err => {
-        console.error("Error executing Blue Merle command:", err);
-        button.textContent = "Error";
+        // Display error on the button
+        button.textContent = `Error: ${err.message}`;
+        button.className = 'btn cbi-button cbi-button-negative';
         button.disabled = false;
     });
 }
@@ -387,6 +388,7 @@ function handleRandomizePassword(ev) {
 function handleRandomizeHostname(ev) {
     handleRandomize(ev, 'Hostname', 'hostname');
 }
+
 
 
 return view.extend({
