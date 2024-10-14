@@ -350,20 +350,14 @@ var randomizeHostname = localStorage.getItem('randomizeHostname') === 'true';
 // Functions to handle randomization actions
 function handleRandomizeSSID(ev) {
     var state = randomizeSSID;
-    var command = state ? 'disable' : 'enable';
+    var command = state ? 'disable-ssid' : 'enable-ssid';
 
     // Show loading indicator
     var button = ev.target;
     button.textContent = "Loading...";
 
-    // Execute local script
-    fs.exec_direct('/etc/init.d/blue-merle-ssid ' + command, function(err, stdout, stderr) {
-        if (err) {
-            console.error("Failed to execute command: ", stderr);
-            button.textContent = "Error";
-            return;
-        }
-
+    // Call Blue Merle
+    callBlueMerle(command).then(function() {
         // Toggle state
         state = !state;
         randomizeSSID = state;
@@ -372,25 +366,22 @@ function handleRandomizeSSID(ev) {
         button.textContent = state ? "Disable SSID" : "Enable SSID";
         button.className = 'btn cbi-button ' + (state ? 'cbi-button-positive' : '');
         localStorage.setItem('randomizeSSID', state);
+    }).catch(function(err) {
+        console.error("Error executing Blue Merle command:", err);
+        button.textContent = "Error";
     });
 }
 
 function handleRandomizePassword(ev) {
     var state = randomizePassword;
-    var command = state ? 'disable' : 'enable';
+    var command = state ? 'disable-password' : 'enable-password';
 
     // Show loading indicator
     var button = ev.target;
     button.textContent = "Loading...";
 
-    // Execute local script
-    fs.exec_direct('/etc/init.d/blue-merle-password ' + command, function(err, stdout, stderr) {
-        if (err) {
-            console.error("Failed to execute command: ", stderr);
-            button.textContent = "Error";
-            return;
-        }
-
+    // Call Blue Merle
+    callBlueMerle(command).then(function() {
         // Toggle state
         state = !state;
         randomizePassword = state;
@@ -399,25 +390,22 @@ function handleRandomizePassword(ev) {
         button.textContent = state ? "Disable Password" : "Enable Password";
         button.className = 'btn cbi-button ' + (state ? 'cbi-button-positive' : '');
         localStorage.setItem('randomizePassword', state);
+    }).catch(function(err) {
+        console.error("Error executing Blue Merle command:", err);
+        button.textContent = "Error";
     });
-}
+}v
 
 function handleRandomizeHostname(ev) {
     var state = randomizeHostname;
-    var command = state ? 'disable' : 'enable';
+    var command = state ? 'disable-hostname' : 'enable-hostname';
 
     // Show loading indicator
     var button = ev.target;
     button.textContent = "Loading...";
 
-    // Execute local script
-    fs.exec_direct('/etc/init.d/blue-merle-hostname ' + command, function(err, stdout, stderr) {
-        if (err) {
-            console.error("Failed to execute command: ", stderr);
-            button.textContent = "Error";
-            return;
-        }
-
+    // Call Blue Merle
+    callBlueMerle(command).then(function() {
         // Toggle state
         state = !state;
         randomizeHostname = state;
@@ -426,6 +414,9 @@ function handleRandomizeHostname(ev) {
         button.textContent = state ? "Disable Hostname" : "Enable Hostname";
         button.className = 'btn cbi-button ' + (state ? 'cbi-button-positive' : '');
         localStorage.setItem('randomizeHostname', state);
+    }).catch(function(err) {
+        console.error("Error executing Blue Merle command:", err);
+        button.textContent = "Error";
     });
 }
 
