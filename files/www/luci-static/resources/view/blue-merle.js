@@ -343,9 +343,9 @@ function handleInput(ev)
 }
 
 // Initialize variables from localStorage
-var randomizeSSID = localStorage.getItem('randomizeSSID') === 'true';
-var randomizePassword = localStorage.getItem('randomizePassword') === 'true';
-var randomizeHostname = localStorage.getItem('randomizeHostname') === 'true';
+var randomizeSSID = localStorage.getItem('randomizeSSID') === 'disable-ssid';
+var randomizePassword = localStorage.getItem('randomizePassword') === 'disable-password';
+var randomizeHostname = localStorage.getItem('randomizeHostname') === 'disable-hostname';
 
 // Functions to handle randomization actions
 function handleRandomizeSSID(ev) {
@@ -365,7 +365,7 @@ function handleRandomizeSSID(ev) {
         // Update button appearance and localStorage
         button.textContent = state ? "Disable SSID" : "Enable SSID";
         button.className = 'btn cbi-button ' + (state ? 'cbi-button-positive' : '');
-        localStorage.setItem('randomizeSSID', state);
+        localStorage.setItem('randomizeSSID', state ? 'disable-ssid' : 'enable-ssid');
     }).catch(function(err) {
         console.error("Error executing Blue Merle command:", err);
         button.textContent = "Error";
@@ -389,12 +389,12 @@ function handleRandomizePassword(ev) {
         // Update button appearance and localStorage
         button.textContent = state ? "Disable Password" : "Enable Password";
         button.className = 'btn cbi-button ' + (state ? 'cbi-button-positive' : '');
-        localStorage.setItem('randomizePassword', state);
+        localStorage.setItem('randomizePassword', state ? 'disable-password' : 'enable-password');
     }).catch(function(err) {
         console.error("Error executing Blue Merle command:", err);
         button.textContent = "Error";
     });
-}v
+}
 
 function handleRandomizeHostname(ev) {
     var state = randomizeHostname;
@@ -413,7 +413,7 @@ function handleRandomizeHostname(ev) {
         // Update button appearance and localStorage
         button.textContent = state ? "Disable Hostname" : "Enable Hostname";
         button.className = 'btn cbi-button ' + (state ? 'cbi-button-positive' : '');
-        localStorage.setItem('randomizeHostname', state);
+        localStorage.setItem('randomizeHostname', state ? 'disable-hostname' : 'enable-hostname');
     }).catch(function(err) {
         console.error("Error executing Blue Merle command:", err);
         button.textContent = "Error";
