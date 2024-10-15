@@ -389,8 +389,6 @@ function handleRandomizeHostname(ev) {
     handleRandomize(ev, 'Hostname', 'hostname');
 }
 
-
-
 return view.extend({
     load: function() {},
 
@@ -444,23 +442,31 @@ return view.extend({
             ]),
         ]);
 
-        readIMEI().then(function(imei) {
-            const e = document.getElementById(imeiInputID);
-            console.log("Input: ", e, e.placeholder, e.value);
-            e.value = imei;
-        }).catch(function(err) {
-            console.log("Error: ", err);
-        });
+        readIMEI().then(
+		    function(imei) {
+		        const e = document.getElementById(imeiInputID);
+		        console.log("Input: ", e, e.placeholder, e.value);
+		        e.value = imei;
+		    }
+		).catch(
+		    function(err){
+		        console.log("Error: ", err)
+		    }
+		)
 
-        readIMSI().then(function(imsi) {
-            const e = document.getElementById(imsiInputID);
-            e.value = imsi;
-        }).catch(function(err) {
-            const e = document.getElementById(imsiInputID);
-            e.value = "No IMSI found";
-        });
+		readIMSI().then(
+		    function(imsi) {
+		        const e = document.getElementById(imsiInputID);
+		        e.value = imsi;
+		    }
+		).catch(
+		    function(err){
+		        const e = document.getElementById(imsiInputID);
+		        e.value = "No IMSI found";
+		    }
+		)
 
-        return view;
+		return view;
     },
 
     handleSave: null,
