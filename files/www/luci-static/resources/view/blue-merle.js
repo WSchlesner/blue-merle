@@ -110,7 +110,7 @@ function handleReset(ev)
 
 
 function callBlueMerle(arg) {
-    const cmd = "/usr/libexec/blue-merle";
+    const cmd = "sudo /usr/libexec/blue-merle";
     var prom = fs.exec(cmd, [arg]);
     return prom.then(
         function(res) {
