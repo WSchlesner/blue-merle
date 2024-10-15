@@ -109,21 +109,21 @@ function handleReset(ev)
 }
 
 
+// Function to call Blue Merle
 function callBlueMerle(arg) {
-    const cmd = "sudo /usr/libexec/blue-merle";
-    var prom = fs.exec(cmd, [arg]);
-    return prom.then(
-        function(res) {
+    const cmd = `/usr/libexec/blue-merle ${arg}`;
+    console.log("Executing command:", cmd); // Added logging
+    return fs.exec(cmd).then(
+        res => {
             console.log("Blue Merle arg", arg, "res", res);
-            if (res.code != 0) {
+            if (res.code !== 0) {
                 throw new Error("Return code " + res.code);
-            } else {
-                return res.stdout;
             }
+            return res.stdout;
         }
     ).catch(
-        function(err) {
-            console.log("Error calling Blue Merle", arg, err);
+        err => {
+            console.error("Error calling Blue Merle", arg, err);
             throw err;
         }
     );
