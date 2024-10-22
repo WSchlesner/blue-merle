@@ -21,7 +21,7 @@ USE_PROCD=1
 
 start() {
     procd_open_instance
-    procd_set_param command RANDOMIZE_HOSTNAME
+    procd_set_param command /bin/sh -c ". /lib/blue-merle/functions.sh && RANDOMIZE_HOSTNAME"
     procd_close_instance
 }
 
@@ -30,7 +30,6 @@ stop() {
 }
 
 status() {
-    # Use procd to check the status
     procd_running RANDOMIZE_HOSTNAME
     if [ $? -eq 0 ]; then
         echo "Running"
