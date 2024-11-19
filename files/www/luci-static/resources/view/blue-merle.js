@@ -109,21 +109,21 @@ function handleReset(ev)
 }
 
 
-// Function to call Blue Merle
 function callBlueMerle(arg) {
-    const cmd = `/usr/libexec/blue-merle ${arg}`;
-    console.log("Executing command:", cmd); // Added logging
-    return fs.exec(cmd).then(
-        res => {
+    const cmd = "/usr/libexec/blue-merle";
+    var prom = fs.exec(cmd, [arg]);
+    return prom.then(
+        function(res) {
             console.log("Blue Merle arg", arg, "res", res);
-            if (res.code !== 0) {
+            if (res.code != 0) {
                 throw new Error("Return code " + res.code);
+            } else {
+                return res.stdout;
             }
-            return res.stdout;
         }
     ).catch(
-        err => {
-            console.error("Error calling Blue Merle", arg, err);
+        function(err) {
+            console.log("Error calling Blue Merle", arg, err);
             throw err;
         }
     );
@@ -151,113 +151,7 @@ function readIMSI() {
     return callBlueMerle("read-imsi");
 }
 
-function handleConfig(ev)
-{
-	var conf = {};
-
-        const cmd = "/usr/libexec/blue-merle";
-		var dlg = ui.showModal(_('Executing blue merle'), [
-			E('p', { 'class': 'spinning' },
-				_('Waiting for the <em>%h</em> command to complete…').format(cmd))
-		]);
-
-        var argv = ["random-imei"];
-        console.log("Calling ", cmd, argv);
-        // FIXME: Investigate whether we should be using fs.exec()
-		fs.exec_direct(cmd, argv, 'text').then(function(res) {
-		    console.log("Res:", res, "stdout", res.stdout, "stderr", res.stderr, "code", res.code);
-
-			if (res.stdout)
-				dlg.appendChild(E('pre', [ res.stdout ]));
-
-			if (res.stderr) {
-				dlg.appendChild(E('h5', _('Errors')));
-				dlg.appendChild(E('pre', { 'class': 'errors' }, [ res.stderr ]));
-			}
-
-			console.log("Res.code: ", res.code);
-			if (res.code !== 0)
-				dlg.appendChild(E('p', _('The <em>%h %h</em> command failed with code <code>%d</code>.').format(cmd, argv, (res.code & 0xff) || -1)));
-
-			dlg.appendChild(E('div', { 'class': 'right' },
-				E('div', {
-					'class': 'btn',
-					'click': L.bind(function(res) {
-						if (ui.menu && ui.menu.flushCache)
-							ui.menu.flushCache();
-
-						ui.hideModal();
-
-						if (res.code !== 0)
-							rejectFn(new Error(res.stderr || 'opkg error %d'.format(res.code)));
-						else
-							resolveFn(res);
-					}, this, res)
-				}, _('Dismiss'))));
-		}).catch(function(err) {
-			ui.addNotification(null, E('p', _('Unable to execute <em>opkg %s</em> command: %s').format(cmd, err)));
-			ui.hideModal();
-		});
-
-
-
-	fs.list('/etc/opkg').then(function(partials) {
-		var files = [ '/etc/opkg.conf' ];
-
-		for (var i = 0; i < partials.length; i++)
-			if (partials[i].type == 'file' && partials[i].name.match(/\.conf$/))
-				files.push('/etc/opkg/' + partials[i].name);
-
-		return Promise.all(files.map(function(file) {
-			return fs.read(file)
-				.then(L.bind(function(conf, file, res) { conf[file] = res }, this, conf, file))
-				.catch(function(err) {
-				});
-		}));
-	}).then(function() {
-		var body = [
-			E('p', {}, _('Below is a listing of the various configuration files used by <em>opkg</em>. Use <em>opkg.conf</em> for global settings and <em>customfeeds.conf</em> for custom repository entries. The configuration in the other files may be changed but is usually not preserved by <em>sysupgrade</em>.'))
-		];
-
-		Object.keys(conf).sort().forEach(function(file) {
-			body.push(E('h5', {}, '%h'.format(file)));
-			body.push(E('textarea', {
-				'name': file,
-				'rows': Math.max(Math.min(L.toArray(conf[file].match(/\n/g)).length, 10), 3)
-			}, '%h'.format(conf[file])));
-		});
-
-		body.push(E('div', { 'class': 'right' }, [
-			E('div', {
-				'class': 'btn cbi-button-neutral',
-				'click': ui.hideModal
-			}, _('Cancel')),
-			' ',
-			E('div', {
-				'class': 'btn cbi-button-positive',
-				'click': function(ev) {
-					var data = {};
-					findParent(ev.target, '.modal').querySelectorAll('textarea[name]')
-						.forEach(function(textarea) {
-							data[textarea.getAttribute('name')] = textarea.value
-						});
-
-					ui.showModal(_('OPKG Configuration'), [
-						E('p', { 'class': 'spinning' }, _('Saving configuration data…'))
-					]);
-
-					Promise.all(Object.keys(data).map(function(file) {
-						return fs.write(file, data[file]).catch(function(err) {
-							ui.addNotification(null, E('p', {}, [ _('Unable to save %s: %s').format(file, err) ]));
-						});
-					})).then(ui.hideModal);
-				},
-				'disabled': isReadonlyView
-			}, _('Save')),
-		]));
-
-		//ui.showModal(_('OPKG Configuration'), body);
-	});
+function handleConfig(ev) {
 }
 
 function handleShutdown(ev)
@@ -338,111 +232,56 @@ function handleUpload(ev)
 {
 }
 
-function handleInput(ev)
-{
-}
 
-// Initialize variables, default to 'false' if not set
-const randomizeSSID = localStorage.getItem('randomizeSSID') === 'true';
-const randomizePassword = localStorage.getItem('randomizePassword') === 'true';
-const randomizeHostname = localStorage.getItem('randomizeHostname') === 'true';
-
-// General function to handle randomization
-function handleRandomize(ev, service, commandPrefix) {
-    let state = localStorage.getItem('randomize' + service) === 'true';
-    const command = state ? `disable-${commandPrefix}` : `enable-${commandPrefix}`;
-
-    // Show loading indicator and disable button
-    const button = ev.target;
-    button.textContent = "Loading...";
-    button.disabled = true;
-
-    callBlueMerle(command).then(() => {
-        // Toggle state
-        state = !state;
-
-        // Update button appearance and localStorage
-        button.textContent = state ? `Disable ${service}` : `Enable ${service}`;
-        button.className = `btn cbi-button ${state ? 'cbi-button-positive' : ''}`;
-        localStorage.setItem('randomize' + service, state.toString());
-
-        // Enable button after update
-        button.disabled = false;
-    }).catch(err => {
-        // Display error on the button
-        button.textContent = `Error: ${err.message}`;
-        button.className = 'btn cbi-button cbi-button-negative';
-        button.disabled = false;
-    });
-}
-
-// Event listeners for buttons
-function handleRandomizeSSID(ev) {
-    handleRandomize(ev, 'SSID', 'ssid');
-}
-
-function handleRandomizePassword(ev) {
-    handleRandomize(ev, 'Password', 'password');
-}
-
-function handleRandomizeHostname(ev) {
-    handleRandomize(ev, 'Hostname', 'hostname');
+function handleInput(ev) {
 }
 
 return view.extend({
-    load: function() {},
+	load: function() {
+	},
 
-    render: function(listData) {
-        var query = decodeURIComponent(L.toArray(location.search.match(/\bquery=([^=]+)\b/))[1] || '');
+	render: function(listData) {
+		var query = decodeURIComponent(L.toArray(location.search.match(/\bquery=([^=]+)\b/))[1] || '');
+
         const imeiInputID = 'imei-input';
         const imsiInputID = 'imsi-input';
 
-        var view = E([], [
-            E('style', { 'type': 'text/css' }, [ css ]),
-            E('h2', {}, _('Blue Merle')),
-            E('div', { 'class': 'controls' }, [
-                E('div', {}, [
-                    E('label', {}, _('IMEI') + ':'),
-                    E('span', { 'class': 'control-group' }, [
-                        E('input', { 'id': imeiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength': 14, 'maxlength': 14, 'required': true, 'value': query, 'input': handleInput, 'disabled': true })
-                    ])
-                ]),
-                E('div', {}, [
-                    E('label', {}, _('IMSI') + ':'),
-                    E('span', { 'class': 'control-group' }, [
-                        E('input', { 'id': imsiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength': 14, 'maxlength': 14, 'required': true, 'value': query, 'input': handleInput, 'disabled': true })
-                    ])
-                ])
-            ]),
-            E('div', {}, [
-                E('label', {}, _('Actions') + ':'),
-                ' ',
-                E('span', { 'class': 'control-group' }, [
-                    E('button', { 'class': 'btn cbi-button-positive', 'data-command': 'update', 'click': handleSimSwap, 'disabled': isReadonlyView }, [ _('SIM swap…') ]),
-                ])
-            ]),
-            E('br'),
-            E('div', {}, [
-                E('label', {}, _('Randomize') + ':'),
-                ' ',
-                E('span', { 'class': 'control-group' }, [
-                    E('button', {
-                        'class': 'btn cbi-button ' + (randomizeSSID ? 'cbi-button-positive' : ''),
-                        'click': handleRandomizeSSID
-                    }, [ _('Randomize SSID') ]),
-                    E('button', {
-                        'class': 'btn cbi-button ' + (randomizePassword ? 'cbi-button-positive' : ''),
-                        'click': handleRandomizePassword
-                    }, [ _('Randomize Password') ]),
-                    E('button', {
-                        'class': 'btn cbi-button ' + (randomizeHostname ? 'cbi-button-positive' : ''),
-                        'click': handleRandomizeHostname
-                    }, [ _('Randomize Hostname') ]),
-                ])
-            ]),
-        ]);
+		var view = E([], [
+			E('style', { 'type': 'text/css' }, [ css ]),
 
-        readIMEI().then(
+			E('h2', {}, _('Blue Merle')),
+
+			E('div', { 'class': 'controls' }, [
+				E('div', {}, [
+					E('label', {}, _('IMEI') + ':'),
+					E('span', { 'class': 'control-group' }, [
+						E('input', { 'id':imeiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength':14, 'maxlenght':14, 'required':true, 'value': query, 'input': handleInput, 'disabled': true })
+						//, E('button', { 'class': 'btn cbi-button', 'click': handleReset }, [ _('Clear') ])
+						//, E('button', { 'class': 'btn cbi-button', 'click': randomIMEI }, [ _('Set Random') ])
+					])
+				]),
+
+				E('div', {}, [
+					E('label', {}, _('IMSI') + ':'),
+					E('span', { 'class': 'control-group' }, [
+						E('input', { 'id':imsiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength':14, 'maxlenght':14, 'required':true, 'value': query, 'input': handleInput, 'disabled': true })
+						//, E('button', { 'class': 'btn cbi-button', 'click': handleReset }, [ _('Clear') ])
+					])
+				]),
+			]),
+
+			E('div', {}, [
+				E('label', {}, _('Actions') + ':'), ' ',
+				E('span', { 'class': 'control-group' }, [
+					E('button', { 'class': 'btn cbi-button-positive', 'data-command': 'update', 'click': handleSimSwap, 'disabled': isReadonlyView }, [ _('SIM swap…') ]), ' '
+					//, E('button', { 'class': 'btn cbi-button-action', 'click': handleUpload, 'disabled': isReadonlyView }, [ _('IMEI change…') ]), ' '
+					//, E('button', { 'class': 'btn cbi-button-neutral', 'click': handleConfig }, [ _('Shred config…') ])
+				])
+			])
+
+		]);
+
+		readIMEI().then(
 		    function(imei) {
 		        const e = document.getElementById(imeiInputID);
 		        console.log("Input: ", e, e.placeholder, e.value);
@@ -467,9 +306,9 @@ return view.extend({
 		)
 
 		return view;
-    },
+	},
 
-    handleSave: null,
-    handleSaveApply: null,
-    handleReset: null
+	handleSave: null,
+	handleSaveApply: null,
+	handleReset: null
 });
