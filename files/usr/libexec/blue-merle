@@ -8,6 +8,11 @@ show_message() {
     echo {\"msg\": \"$1\"} > /dev/ttyS0
 }
 
+check_service_state() {
+    service=$1
+    /etc/init.d/$service enabled
+    return $?
+}
 
 logger -p notice -t blue-merle-libexec  "Libexec $1"
 
@@ -47,31 +52,42 @@ elif [ "$1" == "enable-ssid" ]; then
     show_message "Enabling SSID Randomization..."
     /etc/init.d/blue-merle-ssid enable
     logger -p notice -t blue-merle-libexec "Enabling SSID Randomization"
+
 elif [ "$1" == "disable-ssid" ]; then
     show_message "Disabling SSID Randomization..."
-     /etc/init.d/blue-merle-ssid disable
-     logger -p notice -t blue-merle-libexec "Disabling SSID Randomization"
+    /etc/init.d/blue-merle-ssid disable
+    logger -p notice -t blue-merle-libexec "Disabling SSID Randomization"
 
 elif [ "$1" == "enable-password" ]; then
     show_message "Enabling Password Randomization..."
-    /etc/init.d/blue-merle-ssid enable
+    /etc/init.d/blue-merle-password enable
     logger -p notice -t blue-merle-libexec "Enabling Password Randomization"
+
 elif [ "$1" == "disable-password" ]; then
     show_message "Disabling Password Randomization..."
-    /etc/init.d/blue-merle-ssid disable
+    /etc/init.d/blue-merle-password disable
     logger -p notice -t blue-merle-libexec "Disabling Password Randomization"
 
 elif [ "$1" == "enable-hostname" ]; then
     show_message "Enabling Hostname Randomization..."
-    /etc/init.d/blue-merle-ssid enable
+    /etc/init.d/blue-merle-hostname enable
     logger -p notice -t blue-merle-libexec "Enabling Hostname Randomization"
+
 elif [ "$1" == "disable-hostname" ]; then
     show_message "Disabling Hostname Randomization..."
-    /etc/init.d/blue-merle-ssid disable
+    /etc/init.d/blue-merle-hostname disable
     logger -p notice -t blue-merle-libexec "Disabling Hostname Randomization"
+
+elif [ "$1" == "status-hostname" ]; then
+    check_service_state blue-merle-hostname && echo "enabled" || echo "disabled"
+
+elif [ "$1" == "status-ssid" ]; then
+    check_service_state blue-merle-ssid && echo "enabled" || echo "disabled"
+
+elif [ "$1" == "status-password" ]; then
+    check_service_state blue-merle-password && echo "enabled" || echo "disabled"
 
 else
     echo -n   '{"msg":"Hello, World!"}'
-    #echo 'foo'>&2
     echo 0
 fi
