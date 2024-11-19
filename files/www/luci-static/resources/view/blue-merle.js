@@ -109,21 +109,21 @@ function handleReset(ev)
 }
 
 
+// Function to call Blue Merle
 function callBlueMerle(arg) {
-    const cmd = "/usr/libexec/blue-merle";
-    var prom = fs.exec(cmd, [arg]);
-    return prom.then(
-        function(res) {
+    const cmd = `/usr/libexec/blue-merle ${arg}`;
+    console.log("Executing command:", cmd); // Added logging
+    return fs.exec(cmd).then(
+        res => {
             console.log("Blue Merle arg", arg, "res", res);
-            if (res.code != 0) {
+            if (res.code !== 0) {
                 throw new Error("Return code " + res.code);
-            } else {
-                return res.stdout;
             }
+            return res.stdout;
         }
     ).catch(
-        function(err) {
-            console.log("Error calling Blue Merle", arg, err);
+        err => {
+            console.error("Error calling Blue Merle", arg, err);
             throw err;
         }
     );
@@ -338,56 +338,111 @@ function handleUpload(ev)
 {
 }
 
+function handleInput(ev)
+{
+}
 
-function handleInput(ev) {
+// Initialize variables, default to 'false' if not set
+const randomizeSSID = localStorage.getItem('randomizeSSID') === 'true';
+const randomizePassword = localStorage.getItem('randomizePassword') === 'true';
+const randomizeHostname = localStorage.getItem('randomizeHostname') === 'true';
+
+// General function to handle randomization
+function handleRandomize(ev, service, commandPrefix) {
+    let state = localStorage.getItem('randomize' + service) === 'true';
+    const command = state ? `disable-${commandPrefix}` : `enable-${commandPrefix}`;
+
+    // Show loading indicator and disable button
+    const button = ev.target;
+    button.textContent = "Loading...";
+    button.disabled = true;
+
+    callBlueMerle(command).then(() => {
+        // Toggle state
+        state = !state;
+
+        // Update button appearance and localStorage
+        button.textContent = state ? `Disable ${service}` : `Enable ${service}`;
+        button.className = `btn cbi-button ${state ? 'cbi-button-positive' : ''}`;
+        localStorage.setItem('randomize' + service, state.toString());
+
+        // Enable button after update
+        button.disabled = false;
+    }).catch(err => {
+        // Display error on the button
+        button.textContent = `Error: ${err.message}`;
+        button.className = 'btn cbi-button cbi-button-negative';
+        button.disabled = false;
+    });
+}
+
+// Event listeners for buttons
+function handleRandomizeSSID(ev) {
+    handleRandomize(ev, 'SSID', 'ssid');
+}
+
+function handleRandomizePassword(ev) {
+    handleRandomize(ev, 'Password', 'password');
+}
+
+function handleRandomizeHostname(ev) {
+    handleRandomize(ev, 'Hostname', 'hostname');
 }
 
 return view.extend({
-	load: function() {
-	},
+    load: function() {},
 
-	render: function(listData) {
-		var query = decodeURIComponent(L.toArray(location.search.match(/\bquery=([^=]+)\b/))[1] || '');
-
+    render: function(listData) {
+        var query = decodeURIComponent(L.toArray(location.search.match(/\bquery=([^=]+)\b/))[1] || '');
         const imeiInputID = 'imei-input';
         const imsiInputID = 'imsi-input';
 
-		var view = E([], [
-			E('style', { 'type': 'text/css' }, [ css ]),
+        var view = E([], [
+            E('style', { 'type': 'text/css' }, [ css ]),
+            E('h2', {}, _('Blue Merle')),
+            E('div', { 'class': 'controls' }, [
+                E('div', {}, [
+                    E('label', {}, _('IMEI') + ':'),
+                    E('span', { 'class': 'control-group' }, [
+                        E('input', { 'id': imeiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength': 14, 'maxlength': 14, 'required': true, 'value': query, 'input': handleInput, 'disabled': true })
+                    ])
+                ]),
+                E('div', {}, [
+                    E('label', {}, _('IMSI') + ':'),
+                    E('span', { 'class': 'control-group' }, [
+                        E('input', { 'id': imsiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength': 14, 'maxlength': 14, 'required': true, 'value': query, 'input': handleInput, 'disabled': true })
+                    ])
+                ])
+            ]),
+            E('div', {}, [
+                E('label', {}, _('Actions') + ':'),
+                ' ',
+                E('span', { 'class': 'control-group' }, [
+                    E('button', { 'class': 'btn cbi-button-positive', 'data-command': 'update', 'click': handleSimSwap, 'disabled': isReadonlyView }, [ _('SIM swap…') ]),
+                ])
+            ]),
+            E('br'),
+            E('div', {}, [
+                E('label', {}, _('Randomize') + ':'),
+                ' ',
+                E('span', { 'class': 'control-group' }, [
+                    E('button', {
+                        'class': 'btn cbi-button ' + (randomizeSSID ? 'cbi-button-positive' : ''),
+                        'click': handleRandomizeSSID
+                    }, [ _('Randomize SSID') ]),
+                    E('button', {
+                        'class': 'btn cbi-button ' + (randomizePassword ? 'cbi-button-positive' : ''),
+                        'click': handleRandomizePassword
+                    }, [ _('Randomize Password') ]),
+                    E('button', {
+                        'class': 'btn cbi-button ' + (randomizeHostname ? 'cbi-button-positive' : ''),
+                        'click': handleRandomizeHostname
+                    }, [ _('Randomize Hostname') ]),
+                ])
+            ]),
+        ]);
 
-			E('h2', {}, _('Blue Merle')),
-
-			E('div', { 'class': 'controls' }, [
-				E('div', {}, [
-					E('label', {}, _('IMEI') + ':'),
-					E('span', { 'class': 'control-group' }, [
-						E('input', { 'id':imeiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength':14, 'maxlenght':14, 'required':true, 'value': query, 'input': handleInput, 'disabled': true })
-						//, E('button', { 'class': 'btn cbi-button', 'click': handleReset }, [ _('Clear') ])
-						//, E('button', { 'class': 'btn cbi-button', 'click': randomIMEI }, [ _('Set Random') ])
-					])
-				]),
-
-				E('div', {}, [
-					E('label', {}, _('IMSI') + ':'),
-					E('span', { 'class': 'control-group' }, [
-						E('input', { 'id':imsiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength':14, 'maxlenght':14, 'required':true, 'value': query, 'input': handleInput, 'disabled': true })
-						//, E('button', { 'class': 'btn cbi-button', 'click': handleReset }, [ _('Clear') ])
-					])
-				]),
-			]),
-
-			E('div', {}, [
-				E('label', {}, _('Actions') + ':'), ' ',
-				E('span', { 'class': 'control-group' }, [
-					E('button', { 'class': 'btn cbi-button-positive', 'data-command': 'update', 'click': handleSimSwap, 'disabled': isReadonlyView }, [ _('SIM swap…') ]), ' '
-					//, E('button', { 'class': 'btn cbi-button-action', 'click': handleUpload, 'disabled': isReadonlyView }, [ _('IMEI change…') ]), ' '
-					//, E('button', { 'class': 'btn cbi-button-neutral', 'click': handleConfig }, [ _('Shred config…') ])
-				])
-			])
-
-		]);
-
-		readIMEI().then(
+        readIMEI().then(
 		    function(imei) {
 		        const e = document.getElementById(imeiInputID);
 		        console.log("Input: ", e, e.placeholder, e.value);
@@ -412,9 +467,9 @@ return view.extend({
 		)
 
 		return view;
-	},
+    },
 
-	handleSave: null,
-	handleSaveApply: null,
-	handleReset: null
+    handleSave: null,
+    handleSaveApply: null,
+    handleReset: null
 });
