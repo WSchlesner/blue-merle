@@ -58,6 +58,16 @@ elif [ "$1" == "disable-ssid" ]; then
     /etc/init.d/blue-merle-ssid disable
     logger -p notice -t blue-merle-libexec "Disabling SSID Randomization"
 
+elif [ "$1" == "enable-bssid" ]; then
+    show_message "Enabling BSSID/MAC Randomization..."
+    /etc/init.d/blue-merle-bssid-mac enable
+    logger -p notice -t blue-merle-libexec "Enabling BSSID/MAC Randomization"
+
+elif [ "$1" == "disable-bssid" ]; then
+    show_message "Disabling BSSID/MAC Randomization..."
+    /etc/init.d/blue-merle-bssid-mac disable
+    logger -p notice -t blue-merle-libexec "Disabling BSSID/MAC Randomization"
+
 elif [ "$1" == "enable-password" ]; then
     show_message "Enabling Password Randomization..."
     /etc/init.d/blue-merle-password enable

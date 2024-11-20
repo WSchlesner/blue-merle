@@ -299,6 +299,14 @@ return view.extend({
                 E('label', {}, _('Actions') + ':'), ' ',
                 E('span', { 'class': 'control-group' }, [
                     E('button', { 'class': 'btn cbi-button-positive', 'data-command': 'update', 'click': handleSimSwap, 'disabled': isReadonlyView }, [ _('SIM swap…') ]), ' ',
+					//, E('button', { 'class': 'btn cbi-button-action', 'click': handleUpload, 'disabled': isReadonlyView }, [ _('IMEI change…') ]), ' '
+					//, E('button', { 'class': 'btn cbi-button-neutral', 'click': handleConfig }, [ _('Shred config…') ])
+                ])
+            ]),
+
+			E('div', {}, [
+                E('label', {}, _('Randomization') + ':'), ' ',
+                E('span', { 'class': 'control-group' }, [
                     (function() {
                         var button = E('button', { 'class': 'btn cbi-button', 'click': function() { toggleService('hostname', this); } }, [ _('Enable Hostname') ]);
                         checkServiceState('hostname').then(state => {
