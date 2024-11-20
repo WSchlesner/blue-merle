@@ -304,6 +304,10 @@ return view.extend({
                 ])
             ]),
 
+            //Spacer
+            E('br'),
+
+            //Randomization Div
 			E('div', {}, [
                 E('label', {}, _('Randomization') + ':'), ' ',
                 E('span', { 'class': 'control-group' }, [

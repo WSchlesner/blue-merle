@@ -94,6 +94,9 @@ elif [ "$1" == "status-hostname" ]; then
 elif [ "$1" == "status-ssid" ]; then
     check_service_state blue-merle-ssid && echo "enabled" || echo "disabled"
 
+elif [ "$1" == "status-bssid" ]; then
+    check_service_state blue-merle-bssid-mac && echo "enabled" || echo "disabled"
+
 elif [ "$1" == "status-password" ]; then
     check_service_state blue-merle-password && echo "enabled" || echo "disabled"
 
