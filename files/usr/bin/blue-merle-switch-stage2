@@ -45,6 +45,7 @@ rm -f /tmp/old_imsi
 ## or deterministic based off the IMSI so each IMSI
 ## will have the same IMEI if you swap between them
 ## change the -r (random) to -d (deterministic)
+## Future work: Make Random/Deterministic configurable via Blue-Merle Luci menu
 mcu_send_message "Setting random   IMEI"
 #mcu_send_message "Setting deterministic   IMEI"
 timeout 15 python3 /lib/blue-merle/imei_generate.py -r
