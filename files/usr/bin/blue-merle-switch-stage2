@@ -41,14 +41,29 @@ fi
 
 rm -f /tmp/old_imsi
 
-## Generating an IMEI can be done either by random
-## or deterministic based off the IMSI so each IMSI
-## will have the same IMEI if you swap between them
-## change the -r (random) to -d (deterministic)
-## Future work: Make Random/Deterministic configurable via Blue-Merle Luci menu
-mcu_send_message "Setting random   IMEI"
-#mcu_send_message "Setting deterministic   IMEI"
-timeout 15 python3 /lib/blue-merle/imei_generate.py -r
+# Read IMEI mode config from /etc/config/blue-merle
+IMEI_MODE="random"
+STATIC_IMEI=""
+if [ -f /etc/config/blue-merle ]; then
+    IMEI_MODE=$(grep 'imei_mode' /etc/config/blue-merle | cut -d'"' -f4)
+    STATIC_IMEI=$(grep 'static_imei' /etc/config/blue-merle | cut -d'"' -f4)
+    [ -z "$IMEI_MODE" ] && IMEI_MODE="random"
+fi
+
+case "$IMEI_MODE" in
+    "static")
+        mcu_send_message "Setting static      IMEI"
+        timeout 15 python3 /lib/blue-merle/imei_generate.py -s "$STATIC_IMEI"
+        ;;
+    "deterministic")
+        mcu_send_message "Setting deterministic   IMEI"
+        timeout 15 python3 /lib/blue-merle/imei_generate.py -d
+        ;;
+    *)
+        mcu_send_message "Setting random   IMEI"
+        timeout 15 python3 /lib/blue-merle/imei_generate.py -r
+        ;;
+esac
 
 old_imei=$(cat /tmp/old_imei)
 new_imei=$(READ_IMEI)

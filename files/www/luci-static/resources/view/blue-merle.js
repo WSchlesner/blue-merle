@@ -4,84 +4,179 @@
 'require ui';
 'require rpc';
 
+const CONFIG_PATH = '/etc/config/blue-merle';
+
 var css = '                             \
-    .controls {                         \
+    .bm-main-controls {                 \
+        display: grid;                  \
+        grid-template-columns: 1fr 1fr; \
+        gap: 1em;                       \
+        margin: 1em 0;                  \
+        align-items: start;             \
+    }                                   \
+                                        \
+    .bm-control-group {                 \
         display: flex;                  \
-        margin: .5em 0 1em 0;           \
-        flex-wrap: wrap;                \
-        justify-content: space-around;  \
+        flex-direction: column;         \
+        gap: 0.5em;                     \
     }                                   \
                                         \
-    .controls > * {                     \
-        padding: .25em;                 \
-        white-space: nowrap;            \
-        flex: 1 1 33%;                  \
-        box-sizing: border-box;         \
-        display: flex;                  \
-        flex-wrap: wrap;                \
-    }                                   \
-                                        \
-    .controls > *:first-child,          \
-    .controls > * > label {             \
-        flex-basis: 100%;               \
-        min-width: 250px;               \
-    }                                   \
-                                        \
-    .controls > *:nth-child(2),         \
-    .controls > *:nth-child(3) {        \
-        flex-basis: 20%;                \
-    }                                   \
-                                        \
-    .controls > * > .btn {              \
-        flex-basis: 20px;               \
-        text-align: center;             \
-    }                                   \
-                                        \
-    .controls > * > * {                 \
-        flex-grow: 1;                   \
-        align-self: center;             \
-    }                                   \
-                                        \
-    .controls > div > input {           \
-        width: auto;                    \
-    }                                   \
-                                        \
-    .td.version,                        \
-    .td.size {                          \
-        white-space: nowrap;            \
-    }                                   \
-                                        \
-    ul.deps, ul.deps ul, ul.errors {    \
-        margin-left: 1em;               \
-    }                                   \
-                                        \
-    ul.deps li, ul.errors li {          \
-        list-style: none;               \
-    }                                   \
-                                        \
-    ul.deps li:before {                 \
-        content: "↳";                   \
-        display: inline-block;          \
-        width: 1em;                     \
-        margin-left: -1em;              \
-    }                                   \
-                                        \
-    ul.deps li > span {                 \
-        white-space: nowrap;            \
-    }                                   \
-                                        \
-    ul.errors li {                      \
-        color: #c44;                    \
-        font-size: 90%;                 \
+    .bm-control-group label {           \
         font-weight: bold;              \
-        padding-left: 1.5em;            \
+        color: #404040;                 \
+        margin-bottom: 0.25em;          \
     }                                   \
                                         \
-    ul.errors li:before {               \
-        content: "⚠";                   \
+    .bm-control-group input {           \
+        padding: 0.5em;                 \
+        border: 1px solid #ccc;         \
+        border-radius: 3px;             \
+        background: #f8f8f8;            \
+        font-family: monospace;         \
+        font-size: 0.9em;               \
+    }                                   \
+                                        \
+    .bm-control-group input:disabled {  \
+        background: #f0f0f0;            \
+        color: #666;                    \
+    }                                   \
+                                        \
+    .bm-section {                       \
+        margin: 1.5em 0;                \
+        padding: 0;                     \
+    }                                   \
+                                        \
+    .bm-section h3 {                    \
+        margin: 0 0 1em 0;              \
+        font-size: 1.1em;              \
+        font-weight: bold;              \
+        color: #404040;                 \
+        border-bottom: 1px solid #ccc;  \
+        padding-bottom: 0.5em;          \
+    }                                   \
+                                        \
+    .bm-form-group {                    \
+        display: flex;                  \
+        align-items: center;            \
+        margin: 0.75em 0;               \
+        min-height: 2.5em;              \
+    }                                   \
+                                        \
+    .bm-form-group label {              \
         display: inline-block;          \
-        width: 1.5em;                   \
-        margin-left: -1.5em;            \
+        width: 12em;                    \
+        font-weight: normal;            \
+        margin-right: 1em;              \
+        vertical-align: top;            \
+        line-height: 1.8;               \
+        color: #404040;                 \
+    }                                   \
+                                        \
+    .bm-form-group select,              \
+    .bm-form-group input {              \
+        padding: 0.3em 0.5em;           \
+        border: 1px solid #ccc;         \
+        border-radius: 3px;             \
+        background: #fff;               \
+        min-width: 15em;                \
+    }                                   \
+                                        \
+    .bm-form-group select:focus,        \
+    .bm-form-group input:focus {        \
+        border-color: #0099cc;          \
+        outline: none;                  \
+        box-shadow: 0 0 3px rgba(0,153,204,0.3); \
+    }                                   \
+                                        \
+    .bm-button-group {                  \
+        margin: 1em 0;                  \
+        padding: 1em 0;                 \
+        border-top: 1px solid #eee;     \
+        display: flex;                  \
+        gap: 0.5em;                     \
+        align-items: center;            \
+    }                                   \
+                                        \
+    .bm-button-group.primary {          \
+        border-top: 2px solid #0099cc;  \
+        background: #f8fcff;            \
+        padding: 1em;                   \
+        border-radius: 3px;             \
+        margin: 1.5em 0;                \
+    }                                   \
+                                        \
+    .bm-button-group label {            \
+        font-weight: bold;              \
+        color: #404040;                 \
+        margin-right: 1em;              \
+        min-width: 8em;                 \
+    }                                   \
+                                        \
+    .bm-randomization-grid {            \
+        display: grid;                  \
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); \
+        gap: 0.5em;                     \
+        margin-top: 0.5em;              \
+    }                                   \
+                                        \
+    .bm-status-indicator {              \
+        display: inline-block;          \
+        width: 8px;                     \
+        height: 8px;                    \
+        border-radius: 50%;             \
+        margin-right: 0.5em;            \
+        background: #ccc;               \
+    }                                   \
+                                        \
+    .bm-status-indicator.enabled {      \
+        background: #4CAF50;            \
+    }                                   \
+                                        \
+    .bm-status-indicator.disabled {     \
+        background: #f44336;            \
+    }                                   \
+                                        \
+    .bm-info-text {                     \
+        color: #666;                    \
+        font-size: 0.9em;              \
+        margin-top: 0.5em;              \
+        font-style: italic;             \
+    }                                   \
+                                        \
+    .bm-warning {                       \
+        background: #fff3cd;            \
+        border: 1px solid #ffeaa7;      \
+        border-radius: 3px;             \
+        padding: 0.75em;                \
+        margin: 1em 0;                  \
+        color: #856404;                 \
+    }                                   \
+                                        \
+    .bm-warning::before {               \
+        content: "⚠ ";                  \
+        font-weight: bold;              \
+    }                                   \
+                                        \
+    #static-imei-input {                \
+        width: 15em;                    \
+        font-family: monospace;         \
+    }                                   \
+                                        \
+    @media (max-width: 768px) {         \
+        .bm-main-controls {             \
+            grid-template-columns: 1fr; \
+        }                               \
+        .bm-randomization-grid {        \
+            grid-template-columns: 1fr; \
+        }                               \
+        .bm-form-group {                \
+            flex-direction: column;     \
+            align-items: flex-start;    \
+        }                               \
+        .bm-form-group label {          \
+            width: auto;                \
+            margin-bottom: 0.5em;       \
+        }                               \
     }                                   \
 ';
 
@@ -102,8 +197,7 @@ var languages = ['en'];
 
 var currentDisplayMode = 'available', currentDisplayRows = [];
 
-function handleReset(ev)
-{
+function handleReset(ev) {
 }
 
 function callBlueMerle(arg) {
@@ -134,7 +228,11 @@ function randomIMEI() {
     callBlueMerle("random-imei").then(
         function(res){
             readIMEI().then(
-                console.log("new IMEI", imei)
+                function(imei) {
+                    console.log("new IMEI", imei);
+                    var input = document.getElementById('imei-input');
+                    if (input) input.value = imei.trim();
+                }
             );
         }
     ).catch(
@@ -149,125 +247,73 @@ function readIMSI() {
 }
 
 function handleConfig(ev) {
-        var conf = {};
+    var conf = {};
+
+    const cmd = "/usr/libexec/blue-merle";
+    var dlg = ui.showModal(_('Executing blue merle'), [
+        E('p', { 'class': 'spinning' },
+            _('Waiting for the <em>%h</em> command to complete…').format(cmd))
+    ]);
+
+    var argv = ["random-imei"];
+    console.log("Calling ", cmd, argv);
     
-            const cmd = "/usr/libexec/blue-merle";
-            var dlg = ui.showModal(_('Executing blue merle'), [
-                E('p', { 'class': 'spinning' },
-                    _('Waiting for the <em>%h</em> command to complete…').format(cmd))
-            ]);
-    
-            var argv = ["random-imei"];
-            console.log("Calling ", cmd, argv);
-            // FIXME: Investigate whether we should be using fs.exec()
-            fs.exec_direct(cmd, argv, 'text').then(function(res) {
-                console.log("Res:", res, "stdout", res.stdout, "stderr", res.stderr, "code", res.code);
-    
-                if (res.stdout)
-                    dlg.appendChild(E('pre', [ res.stdout ]));
-    
-                if (res.stderr) {
-                    dlg.appendChild(E('h5', _('Errors')));
-                    dlg.appendChild(E('pre', { 'class': 'errors' }, [ res.stderr ]));
+    fs.exec_direct(cmd, argv, 'text').then(function(res) {
+        console.log("Res:", res, "stdout", res.stdout, "stderr", res.stderr, "code", res.code);
+
+        if (res.stdout)
+            dlg.appendChild(E('pre', [ res.stdout ]));
+
+        if (res.stderr) {
+            dlg.appendChild(E('h5', _('Errors')));
+            dlg.appendChild(E('pre', { 'class': 'errors' }, [ res.stderr ]));
+        }
+
+        console.log("Res.code: ", res.code);
+        if (res.code !== 0)
+            dlg.appendChild(E('p', _('The <em>%h %h</em> command failed with code <code>%d</code>.').format(cmd, argv, (res.code & 0xff) || -1)));
+
+        dlg.appendChild(E('div', { 'class': 'right' },
+            E('div', {
+                'class': 'btn',
+                'click': function() {
+                    if (ui.menu && ui.menu.flushCache)
+                        ui.menu.flushCache();
+                    ui.hideModal();
                 }
-    
-                console.log("Res.code: ", res.code);
-                if (res.code !== 0)
-                    dlg.appendChild(E('p', _('The <em>%h %h</em> command failed with code <code>%d</code>.').format(cmd, argv, (res.code & 0xff) || -1)));
-    
-                dlg.appendChild(E('div', { 'class': 'right' },
-                    E('div', {
-                        'class': 'btn',
-                        'click': L.bind(function(res) {
-                            if (ui.menu && ui.menu.flushCache)
-                                ui.menu.flushCache();
-    
-                            ui.hideModal();
-    
-                            if (res.code !== 0)
-                                rejectFn(new Error(res.stderr || 'opkg error %d'.format(res.code)));
-                            else
-                                resolveFn(res);
-                        }, this, res)
-                    }, _('Dismiss'))));
-            }).catch(function(err) {
-                ui.addNotification(null, E('p', _('Unable to execute <em>opkg %s</em> command: %s').format(cmd, err)));
-                ui.hideModal();
-            });
-    
-    
-    
-        fs.list('/etc/opkg').then(function(partials) {
-            var files = [ '/etc/opkg.conf' ];
-    
-            for (var i = 0; i < partials.length; i++)
-                if (partials[i].type == 'file' && partials[i].name.match(/\.conf$/))
-                    files.push('/etc/opkg/' + partials[i].name);
-    
-            return Promise.all(files.map(function(file) {
-                return fs.read(file)
-                    .then(L.bind(function(conf, file, res) { conf[file] = res }, this, conf, file))
-                    .catch(function(err) {
+            }, _('Dismiss'))));
+    }).catch(function(err) {
+        ui.addNotification(null, E('p', _('Unable to execute <em>%s</em> command: %s').format(cmd, err)));
+        ui.hideModal();
+    });
+}
+
+function handleShutdown(ev) {
+    return ui.showModal(_('System Shutdown'), [
+        E('p', {}, _('The system is shutting down now. Please wait...')),
+        E('div', { 'class': 'right' }, [
+            E('button', { 
+                'class': 'btn cbi-button-neutral',
+                'click': ui.hideModal 
+            }, _('Cancel')),
+            E('button', { 
+                'class': 'btn cbi-button-negative',
+                'click': function() {
+                    callBlueMerle("shutdown").then(function() {
+                        ui.hideModal();
                     });
-            }));
-        }).then(function() {
-            var body = [
-                E('p', {}, _('Below is a listing of the various configuration files used by <em>opkg</em>. Use <em>opkg.conf</em> for global settings and <em>customfeeds.conf</em> for custom repository entries. The configuration in the other files may be changed but is usually not preserved by <em>sysupgrade</em>.'))
-            ];
-    
-            Object.keys(conf).sort().forEach(function(file) {
-                body.push(E('h5', {}, '%h'.format(file)));
-                body.push(E('textarea', {
-                    'name': file,
-                    'rows': Math.max(Math.min(L.toArray(conf[file].match(/\n/g)).length, 10), 3)
-                }, '%h'.format(conf[file])));
-            });
-    
-            body.push(E('div', { 'class': 'right' }, [
-                E('div', {
-                    'class': 'btn cbi-button-neutral',
-                    'click': ui.hideModal
-                }, _('Cancel')),
-                ' ',
-                E('div', {
-                    'class': 'btn cbi-button-positive',
-                    'click': function(ev) {
-                        var data = {};
-                        findParent(ev.target, '.modal').querySelectorAll('textarea[name]')
-                            .forEach(function(textarea) {
-                                data[textarea.getAttribute('name')] = textarea.value
-                            });
-    
-                        ui.showModal(_('OPKG Configuration'), [
-                            E('p', { 'class': 'spinning' }, _('Saving configuration data…'))
-                        ]);
-    
-                        Promise.all(Object.keys(data).map(function(file) {
-                            return fs.write(file, data[file]).catch(function(err) {
-                                ui.addNotification(null, E('p', {}, [ _('Unable to save %s: %s').format(file, err) ]));
-                            });
-                        })).then(ui.hideModal);
-                    },
-                    'disabled': isReadonlyView
-                }, _('Save')),
-            ]));
-    
-            //ui.showModal(_('OPKG Configuration'), body);
-        });
+                }
+            }, _('Confirm Shutdown'))
+        ])
+    ]);
 }
 
-function handleShutdown(ev)
-{
-    return callBlueMerle("shutdown")
-}
-
-function handleRemove(ev)
-{
+function handleRemove(ev) {
 }
 
 function handleSimSwap(ev) {
     const spinnerID = 'swap-spinner-id';
-    var dlg = ui.showModal(_('Starting SIM swap...'),
+    var dlg = ui.showModal(_('SIM Swap Process'),
         [
             E('p', { 'class': 'spinning', 'id': spinnerID },
                 _('Shutting down modem…')
@@ -283,24 +329,29 @@ function handleSimSwap(ev) {
             );
             dlg.appendChild(
                 E('p', { 'class': 'text'},
-                    _("Generating Random IMEI")
+                    _("Generating random IMEI...")
                 )
             );
             callBlueMerle("random-imei").then(
                 function(res) {
                     document.getElementById(spinnerID).style = "display:none";
                     dlg.appendChild(
-                        E('div', { 'class': 'text'},
+                        E('div', { 'class': 'bm-section'},
                           [
                             E('p', { 'class': 'text'},
-                                _("IMEI set:") + " " + res
+                                _("New IMEI assigned:") + " " + E('code', {}, res)
                             ),
-                            E('p', { 'class': 'text'},
-                                _("Please shutdown the device, swap the SIM, then go to another place before booting")
+                            E('div', { 'class': 'bm-warning' },
+                                _("Important: Shutdown the device, swap the SIM card, then move to a different location before powering on.")
                             ),
-                            E('button', { 'class': 'btn cbi-button-positive', 'click': handleShutdown, 'disabled': isReadonlyView },
-                                [ _('Shutdown…') ]
-                            )
+                            E('div', { 'class': 'bm-button-group' }, [
+                                E('button', { 'class': 'btn cbi-button-neutral', 'click': ui.hideModal },
+                                    [ _('Cancel') ]
+                                ),
+                                E('button', { 'class': 'btn cbi-button-negative', 'click': handleShutdown, 'disabled': isReadonlyView },
+                                    [ _('Shutdown Now') ]
+                                )
+                            ])
                           ]
                         )
                     )
@@ -309,7 +360,7 @@ function handleSimSwap(ev) {
                 function(err) {
                     dlg.appendChild(
                         E('p',{'class': 'error'},
-                            _('Error setting IMEI! ') + err
+                            _('Error setting IMEI: ') + err
                         )
                     )
                 }
@@ -319,19 +370,17 @@ function handleSimSwap(ev) {
         function(err) {
             dlg.appendChild(
                 E('p',{'class': 'error'},
-                    _('Error! ') + err
+                    _('Error: ') + err
                 )
             )
         }
     );
 }
 
-function handleOpkg(ev)
-{
+function handleOpkg(ev) {
 }
 
-function handleUpload(ev)
-{
+function handleUpload(ev) {
 }
 
 function handleInput(ev) {
@@ -359,122 +408,314 @@ function toggleService(service, button) {
             return callBlueMerle(command).then(
                 function(res) {
                     console.log("Service", service, "command", command, "result", res);
-                    button.textContent = isEnabled ? 'Enable ' + service : 'Disable ' + service;
+                    updateServiceButton(button, service, !isEnabled);
                 }
             ).catch(
                 function(err) {
                     console.log("Error toggling service", service, err);
+                    ui.addNotification(null, E('p', _('Error toggling %s: %s').format(service, err)));
                 }
             );
         }
     );
 }
 
+function updateServiceButton(button, service, isEnabled) {
+    var indicator = button.querySelector('.bm-status-indicator');
+    var text = button.querySelector('.bm-button-text');
+    
+    if (indicator) {
+        indicator.className = 'bm-status-indicator ' + (isEnabled ? 'enabled' : 'disabled');
+    }
+    if (text) {
+        text.textContent = (isEnabled ? 'Disable' : 'Enable') + ' ' + service.charAt(0).toUpperCase() + service.slice(1);
+    }
+}
+
+function createServiceButton(service, displayName) {
+    var button = E('button', { 
+        'class': 'btn cbi-button',
+        'click': function() { toggleService(service, this); },
+        'disabled': isReadonlyView 
+    }, [
+        E('span', { 'class': 'bm-status-indicator' }),
+        E('span', { 'class': 'bm-button-text' }, _('Enable ') + displayName)
+    ]);
+    
+    checkServiceState(service).then(function(state) {
+        updateServiceButton(button, service, state);
+    });
+    
+    return button;
+}
+
+// Helper to read config
+function readConfig() {
+    return fs.read(CONFIG_PATH).then(
+        function(res) {
+            try {
+                return JSON.parse(res);
+            } catch (e) {
+                return {};
+            }
+        },
+        function() { return {}; }
+    );
+}
+
+// Helper to write config
+function writeConfig(cfg) {
+    return fs.write(CONFIG_PATH, JSON.stringify(cfg, null, 2));
+}
+
+// Global variables for IMEI config
+var currentImeiMode = 'random';
+var currentStaticImei = '';
+
+function handleImeiModeChange(ev) {
+    currentImeiMode = ev.target.value;
+    var staticInput = document.getElementById('static-imei-input');
+    var warningDiv = document.getElementById('static-imei-warning');
+    
+    if (staticInput) {
+        staticInput.style.display = currentImeiMode === 'static' ? 'block' : 'none';
+    }
+    if (warningDiv) {
+        warningDiv.style.display = currentImeiMode === 'static' ? 'block' : 'none';
+    }
+}
+
+function handleStaticImeiChange(ev) {
+    currentStaticImei = ev.target.value;
+    // Basic validation
+    var isValid = /^[0-9]{15}$/.test(currentStaticImei);
+    var saveButton = document.getElementById('save-config-button');
+    if (saveButton) {
+        saveButton.disabled = currentImeiMode === 'static' && !isValid;
+    }
+}
+
+function handleSaveImeiConfig(ev) {
+    var config = {
+        imei_mode: currentImeiMode,
+        timestamp: new Date().toISOString()
+    };
+    
+    if (currentImeiMode === 'static') {
+        if (!/^[0-9]{15}$/.test(currentStaticImei)) {
+            ui.addNotification(null, E('p', _('Error: Static IMEI must be exactly 15 digits')));
+            return;
+        }
+        config.static_imei = currentStaticImei;
+    }
+    
+    writeConfig(config).then(function() {
+        ui.addNotification(null, E('p', _('IMEI configuration saved successfully!')));
+    }).catch(function(err) {
+        ui.addNotification(null, E('p', _('Error saving IMEI configuration: ') + err));
+    });
+}
+
+function handleGenerateRandomImei(ev) {
+    var button = ev.target;
+    button.disabled = true;
+    button.textContent = _('Generating...');
+    
+    randomIMEI();
+    
+    setTimeout(function() {
+        button.disabled = false;
+        button.textContent = _('Generate New IMEI');
+    }, 2000);
+}
+
 return view.extend({
     load: function() {
+        return Promise.resolve();
     },
 
     render: function(listData) {
         var query = decodeURIComponent(L.toArray(location.search.match(/\bquery=([^=]+)\b/))[1] || '');
 
-        const imeiInputID = 'imei-input';
-        const imsiInputID = 'imsi-input';
-
         var view = E([], [
             E('style', { 'type': 'text/css' }, [ css ]),
 
-            E('h2', {}, _('Blue Merle')),
+            E('h2', {}, _('Blue Merle - Identity Randomization')),
 
-            E('div', { 'class': 'controls' }, [
-                E('div', {}, [
-                    E('label', {}, _('IMEI') + ':'),
-                    E('span', { 'class': 'control-group' }, [
-                        E('input', { 'id':imeiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength':14, 'maxlenght':14, 'required':true, 'value': query, 'input': handleInput, 'disabled': true })
-                        //, E('button', { 'class': 'btn cbi-button', 'click': handleReset }, [ _('Clear') ])
-						//, E('button', { 'class': 'btn cbi-button', 'click': randomIMEI }, [ _('Set Random') ])
+            // Current Status Section
+            E('div', { 'class': 'bm-section' }, [
+                E('h3', {}, _('Current Device Identity')),
+                E('div', { 'class': 'bm-main-controls' }, [
+                    E('div', { 'class': 'bm-control-group' }, [
+                        E('label', {}, _('IMEI (International Mobile Equipment Identity)')),
+                        E('input', { 
+                            'id': 'imei-input', 
+                            'type': 'text', 
+                            'placeholder': _('Loading...'), 
+                            'disabled': true 
+                        }),
+                        E('div', { 'class': 'bm-info-text' }, 
+                            _('Unique identifier for your cellular modem')
+                        )
+                    ]),
+                    E('div', { 'class': 'bm-control-group' }, [
+                        E('label', {}, _('IMSI (International Mobile Subscriber Identity)')),
+                        E('input', { 
+                            'id': 'imsi-input', 
+                            'type': 'text', 
+                            'placeholder': _('Loading...'), 
+                            'disabled': true 
+                        }),
+                        E('div', { 'class': 'bm-info-text' }, 
+                            _('Unique identifier stored on your SIM card')
+                        )
+                    ])
+                ])
+            ]),
+
+            // Primary Action Section
+            E('div', { 'class': 'bm-section' }, [
+                E('h3', {}, _('Primary Actions')),
+                E('div', { 'class': 'bm-button-group primary' }, [
+                    E('label', {}, _('SIM Swap:')),
+                    E('button', { 
+                        'class': 'btn cbi-button-action', 
+                        'click': handleSimSwap, 
+                        'disabled': isReadonlyView 
+                    }, [ _('Initiate SIM Swap Process') ]),
+                    E('div', { 'class': 'bm-info-text' }, 
+                        _('Safely prepare device for SIM card replacement with new identity')
+                    )
+                ]),
+                E('div', { 'class': 'bm-button-group' }, [
+                    E('label', {}, _('Quick IMEI:')),
+                    E('button', { 
+                        'class': 'btn cbi-button-positive', 
+                        'click': handleGenerateRandomImei, 
+                        'disabled': isReadonlyView 
+                    }, [ _('Generate New IMEI') ]),
+                    E('div', { 'class': 'bm-info-text' }, 
+                        _('Generate and apply a new random IMEI immediately')
+                    )
+                ])
+            ]),
+
+            // IMEI Configuration Section
+            E('div', { 'class': 'bm-section' }, [
+                E('h3', {}, _('IMEI Generation Configuration')),
+                
+                E('div', { 'class': 'bm-form-group' }, [
+                    E('label', {}, _('Generation Mode:')),
+                    E('select', { 
+                        'id': 'imei-mode-select',
+                        'change': handleImeiModeChange
+                    }, [
+                        E('option', { 'value': 'random' }, _('Random - Generate completely random IMEI')),
+                        E('option', { 'value': 'deterministic' }, _('Deterministic - Derive from IMSI hash')),
+                        E('option', { 'value': 'static' }, _('Static - Use manually specified IMEI'))
                     ])
                 ]),
+                
+                E('div', { 'class': 'bm-form-group' }, [
+                    E('label', {}, _('Static IMEI:')),
+                    E('input', { 
+                        'id': 'static-imei-input',
+                        'type': 'text', 
+                        'placeholder': _('Enter 15-digit IMEI (e.g. 353232102084953)'), 
+                        'maxlength': 15,
+                        'pattern': '[0-9]{15}',
+                        'style': 'display: none;',
+                        'input': handleStaticImeiChange
+                    })
+                ]),
+                
+                E('div', { 'id': 'static-imei-warning', 'class': 'bm-warning', 'style': 'display: none;' },
+                    _('Warning: Using the same static IMEI repeatedly may compromise your privacy and security.')
+                ),
+                
+                E('div', { 'class': 'bm-button-group' }, [
+                    E('button', { 
+                        'id': 'save-config-button',
+                        'class': 'btn cbi-button-positive',
+                        'click': handleSaveImeiConfig,
+                        'disabled': isReadonlyView
+                    }, [ _('Save Configuration') ])
+                ])
+            ]),
 
-                E('div', {}, [
-                    E('label', {}, _('IMSI') + ':'),
-                    E('span', { 'class': 'control-group' }, [
-                        E('input', { 'id':imsiInputID, 'type': 'text', 'name': 'filter', 'placeholder': _('e.g. 31428392718429'), 'minlength':14, 'maxlenght':14, 'required':true, 'value': query, 'input': handleInput, 'disabled': true })
-                        //, E('button', { 'class': 'btn cbi-button', 'click': handleReset }, [ _('Clear') ])
+            // Randomization Services Section
+            E('div', { 'class': 'bm-section' }, [
+                E('h3', {}, _('Additional Privacy Features')),
+                E('div', { 'class': 'bm-button-group' }, [
+                    E('label', {}, _('Network Randomization:')),
+                    E('div', { 'class': 'bm-randomization-grid' }, [
+                        createServiceButton('hostname', 'Hostname'),
+                        createServiceButton('bssid', 'BSSID/MAC'),
+                        createServiceButton('ssid', 'SSID'),
+                        createServiceButton('password', 'WiFi Password')
                     ])
-                ])
-            ]),
-
-            E('div', {}, [
-                E('label', {}, _('Actions') + ':'), ' ',
-                E('span', { 'class': 'control-group' }, [
-                    E('button', { 'class': 'btn cbi-button-positive', 'data-command': 'update', 'click': handleSimSwap, 'disabled': isReadonlyView }, [ _('SIM swap…') ]), ' ',
-					//, E('button', { 'class': 'btn cbi-button-action', 'click': handleUpload, 'disabled': isReadonlyView }, [ _('IMEI change…') ]), ' '
-					//, E('button', { 'class': 'btn cbi-button-neutral', 'click': handleConfig }, [ _('Shred config…') ])
-                ])
-            ]),
-
-            //Spacer
-            E('br'),
-
-            //Randomization Div
-			E('div', {}, [
-                E('label', {}, _('Randomization') + ':'), ' ',
-                E('span', { 'class': 'control-group' }, [
-                    (function() {
-                        var button = E('button', { 'class': 'btn cbi-button', 'click': function() { toggleService('hostname', this); } }, [ _('Enable Hostname') ]);
-                        checkServiceState('hostname').then(state => {
-                            button.textContent = state ? 'Disable Hostname' : 'Enable Hostname';
-                        });
-                        return button;
-                    })(), ' ',
-                    (function() {
-                        var button = E('button', { 'class': 'btn cbi-button', 'click': function() { toggleService('bssid', this); } }, [ _('Enable BSSID/MAC') ]);
-                        checkServiceState('bssid').then(state => {
-                            button.textContent = state ? 'Disable BSSID/MAC' : 'Enable BSSID/MAC';
-                        });
-                        return button;
-                    })(), ' ',
-                    (function() {
-                        var button = E('button', { 'class': 'btn cbi-button', 'click': function() { toggleService('ssid', this); } }, [ _('Enable SSID') ]);
-                        checkServiceState('ssid').then(state => {
-                            button.textContent = state ? 'Disable SSID' : 'Enable SSID';
-                        });
-                        return button;
-                    })(), ' ',
-                    (function() {
-                        var button = E('button', { 'class': 'btn cbi-button', 'click': function() { toggleService('password', this); } }, [ _('Enable Password') ]);
-                        checkServiceState('password').then(state => {
-                            button.textContent = state ? 'Disable Password' : 'Enable Password';
-                        });
-                        return button;
-                    })()
-                ])
+                ]),
+                E('div', { 'class': 'bm-info-text' }, 
+                    _('These services randomize various network identifiers on startup to enhance privacy')
+                )
             ])
         ]);
 
-        readIMEI().then(
-            function(imei) {
-                const e = document.getElementById(imeiInputID);
-                console.log("Input: ", e, e.placeholder, e.value);
-                e.value = imei;
-            }
-        ).catch(
-            function(err){
-                console.log("Error: ", err)
-            }
-        );
+        // Load current values after DOM is ready
+        setTimeout(function() {
+            // Load IMEI
+            readIMEI().then(function(imei) {
+                var input = document.getElementById('imei-input');
+                if (input) {
+                    input.value = imei.trim();
+                    input.placeholder = _('IMEI loaded');
+                }
+            }).catch(function(err) {
+                console.log("Error reading IMEI:", err);
+                var input = document.getElementById('imei-input');
+                if (input) {
+                    input.value = "";
+                    input.placeholder = _('Error reading IMEI');
+                }
+            });
 
-        readIMSI().then(
-            function(imsi) {
-                const e = document.getElementById(imsiInputID);
-                e.value = imsi;
-            }
-        ).catch(
-            function(err){
-                const e = document.getElementById(imsiInputID);
-                e.value = "No IMSI found";
-            }
-        );
+            // Load IMSI
+            readIMSI().then(function(imsi) {
+                var input = document.getElementById('imsi-input');
+                if (input) {
+                    input.value = imsi.trim();
+                    input.placeholder = _('IMSI loaded');
+                }
+            }).catch(function(err) {
+                console.log("Error reading IMSI:", err);
+                var input = document.getElementById('imsi-input');
+                if (input) {
+                    input.value = "";
+                    input.placeholder = _('No IMSI found');
+                }
+            });
+
+            // Load saved config
+            readConfig().then(function(config) {
+                currentImeiMode = config.imei_mode || 'random';
+                currentStaticImei = config.static_imei || '';
+                
+                var select = document.getElementById('imei-mode-select');
+                if (select) select.value = currentImeiMode;
+                
+                var staticInput = document.getElementById('static-imei-input');
+                var warningDiv = document.getElementById('static-imei-warning');
+                if (staticInput) {
+                    staticInput.value = currentStaticImei;
+                    staticInput.style.display = currentImeiMode === 'static' ? 'block' : 'none';
+                }
+                if (warningDiv) {
+                    warningDiv.style.display = currentImeiMode === 'static' ? 'block' : 'none';
+                }
+            }).catch(function(err) {
+                console.log("Could not load config:", err);
+            });
+        }, 100);
 
         return view;
     },

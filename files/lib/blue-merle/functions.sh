@@ -26,10 +26,11 @@ RANDOMIZE_MACADDR () {
         uci set wireless.$iface.macaddr=$(UNICAST_MAC_GEN)
     done
 }
-    
+
 #Generate Pseudo Random SSID for WiFi Interfaces
 RANDOMIZE_SSID() {
-    NEW_SSID="Mudi_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 5)"
+    #NEW_SSID="Mudi_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 5)"
+    NEW_SSID="$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8)"
     uci set wireless.@wifi-iface[0].ssid="$NEW_SSID"
     uci set wireless.@wifi-iface[1].ssid="$NEW_SSID"
 }
