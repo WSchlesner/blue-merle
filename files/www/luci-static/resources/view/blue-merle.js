@@ -3,6 +3,7 @@
 'require fs';
 'require ui';
 'require rpc';
+'require uci';
 
 const CONFIG_PATH = '/etc/config/blue-merle';
 
@@ -79,6 +80,7 @@ var css = '                             \
         border-radius: 3px;             \
         background: #fff;               \
         min-width: 15em;                \
+        color:rgb(0, 0, 0);               \
     }                                   \
                                         \
     .bm-form-group select:focus,        \
@@ -452,23 +454,76 @@ function createServiceButton(service, displayName) {
     return button;
 }
 
-// Helper to read config
-function readConfig() {
-    return fs.read(CONFIG_PATH).then(
-        function(res) {
-            try {
-                return JSON.parse(res);
-            } catch (e) {
-                return {};
-            }
-        },
-        function() { return {}; }
-    );
+// Helper to read UCI config
+function readUciConfig() {
+    return new Promise(function(resolve, reject) {
+        uci.load('blue-merle').then(function() {
+            var config = {
+                imei_mode: uci.get('blue-merle', 'imei', 'mode') || 'random',
+                static_imei: uci.get('blue-merle', 'imei', 'static_value') || ''
+            };
+            resolve(config);
+        }).catch(function(err) {
+            // If config doesn't exist, return defaults
+            resolve({
+                imei_mode: 'random',
+                static_imei: ''
+            });
+        });
+    });
 }
 
-// Helper to write config
-function writeConfig(cfg) {
-    return fs.write(CONFIG_PATH, JSON.stringify(cfg, null, 2));
+// Helper to write UCI config - Improved version with better error handling
+function writeUciConfig(config) {
+    return new Promise(function(resolve, reject) {
+        console.log("Attempting to write UCI config:", config);
+        
+        uci.load('blue-merle').then(function() {
+            console.log("UCI blue-merle package loaded successfully");
+            
+            // Create the section if it doesn't exist
+            if (!uci.get('blue-merle', 'imei')) {
+                console.log("Creating new imei section");
+                uci.add('blue-merle', 'imei', 'imei');
+            } else {
+                console.log("imei section already exists");
+            }
+            
+            // Set the values
+            console.log("Setting mode to:", config.imei_mode);
+            uci.set('blue-merle', 'imei', 'mode', config.imei_mode);
+            
+            if (config.static_imei) {
+                console.log("Setting static_value to:", config.static_imei);
+                uci.set('blue-merle', 'imei', 'static_value', config.static_imei);
+            } else {
+                console.log("Unsetting static_value");
+                uci.unset('blue-merle', 'imei', 'static_value');
+            }
+            
+            // Save and commit changes
+            console.log("Saving UCI changes...");
+            return uci.save();
+        }).then(function() {
+            console.log("UCI save successful, applying changes...");
+            return uci.apply();
+        }).then(function() {
+            console.log("UCI apply successful");
+            resolve();
+        }).catch(function(err) {
+            console.error("UCI operation failed:", err);
+            // Provide more specific error messages
+            var errorMsg = "Unknown UCI error";
+            if (err.toString().includes("Permission denied")) {
+                errorMsg = "Permission denied - check file permissions on /etc/config/blue-merle";
+            } else if (err.toString().includes("No such file")) {
+                errorMsg = "Config file missing - ensure /etc/config/blue-merle exists";
+            } else if (err.toString().includes("Invalid")) {
+                errorMsg = "Invalid UCI configuration";
+            }
+            reject(errorMsg + ": " + err.toString());
+        });
+    });
 }
 
 // Global variables for IMEI config
@@ -500,8 +555,7 @@ function handleStaticImeiChange(ev) {
 
 function handleSaveImeiConfig(ev) {
     var config = {
-        imei_mode: currentImeiMode,
-        timestamp: new Date().toISOString()
+        imei_mode: currentImeiMode
     };
     
     if (currentImeiMode === 'static') {
@@ -512,9 +566,10 @@ function handleSaveImeiConfig(ev) {
         config.static_imei = currentStaticImei;
     }
     
-    writeConfig(config).then(function() {
+    writeUciConfig(config).then(function() {
         ui.addNotification(null, E('p', _('IMEI configuration saved successfully!')));
     }).catch(function(err) {
+        console.log("Error saving UCI config:", err);
         ui.addNotification(null, E('p', _('Error saving IMEI configuration: ') + err));
     });
 }
@@ -581,7 +636,7 @@ return view.extend({
 
             // IMEI Configuration Section
             E('div', { 'class': 'bm-section' }, [
-                E('h3', {}, _('IMEI Generation Configuration')),
+                E('h3', {}, _('SIM Swap Switch: IMEI Generation Configuration')),
                 
                 E('div', { 'class': 'bm-form-group' }, [
                     E('label', {}, _('Generation Mode:')),
@@ -600,7 +655,7 @@ return view.extend({
                     E('input', { 
                         'id': 'static-imei-input',
                         'type': 'text', 
-                        'placeholder': _('Enter 15-digit IMEI (e.g. 353232102084953)'), 
+                        'placeholder': _('Enter 15-digit IMEI (e.g. 351380441332807)'), 
                         'maxlength': 15,
                         'pattern': '[0-9]{15}',
                         'style': 'display: none;',
@@ -674,8 +729,8 @@ return view.extend({
                 }
             });
 
-            // Load saved config
-            readConfig().then(function(config) {
+            // Load saved UCI config
+            readUciConfig().then(function(config) {
                 currentImeiMode = config.imei_mode || 'random';
                 currentStaticImei = config.static_imei || '';
                 
@@ -692,7 +747,7 @@ return view.extend({
                     warningDiv.style.display = currentImeiMode === 'static' ? 'block' : 'none';
                 }
             }).catch(function(err) {
-                console.log("Could not load config:", err);
+                console.log("Could not load UCI config:", err);
             });
         }, 100);
 

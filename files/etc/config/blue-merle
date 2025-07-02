@@ -1,0 +1,3 @@
+config imei 'imei'
+	option mode 'random'
+	option static_value ''

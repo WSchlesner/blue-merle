@@ -41,26 +41,70 @@ fi
 
 rm -f /tmp/old_imsi
 
-# Read IMEI mode config from /etc/config/blue-merle
+# Read IMEI mode config from UCI config /etc/config/blue-merle
 IMEI_MODE="random"
 STATIC_IMEI=""
+
+# First, try to load the UCI config properly
 if [ -f /etc/config/blue-merle ]; then
-    IMEI_MODE=$(grep 'imei_mode' /etc/config/blue-merle | cut -d'"' -f4)
-    STATIC_IMEI=$(grep 'static_imei' /etc/config/blue-merle | cut -d'"' -f4)
-    [ -z "$IMEI_MODE" ] && IMEI_MODE="random"
+    # Use UCI commands to read the configuration
+    IMEI_MODE=$(uci -q get blue-merle.imei.mode 2>/dev/null || echo "random")
+    STATIC_IMEI=$(uci -q get blue-merle.imei.static_value 2>/dev/null || echo "")
+    
+    # Fallback to manual parsing if UCI fails
+    if [ -z "$IMEI_MODE" ] || [ "$IMEI_MODE" = "random" ]; then
+        # Try alternative parsing methods
+        if grep -q "option mode" /etc/config/blue-merle; then
+            IMEI_MODE=$(awk '/option mode/ {gsub(/['"'"']/, "", $3); print $3}' /etc/config/blue-merle)
+        fi
+        if grep -q "option static_value" /etc/config/blue-merle; then
+            STATIC_IMEI=$(awk '/option static_value/ {gsub(/['"'"']/, "", $3); print $3}' /etc/config/blue-merle)
+        fi
+    fi
+    
+    # Debug output to help troubleshoot
+    logger -p notice -t blue-merle-stage2 "Config file exists, IMEI_MODE='$IMEI_MODE', STATIC_IMEI='$STATIC_IMEI'"
+    mcu_send_message "Config: Mode=$IMEI_MODE"
+else
+    logger -p notice -t blue-merle-stage2 "Config file /etc/config/blue-merle not found, using defaults"
+    mcu_send_message "No config file,  using random mode"
 fi
 
+# Ensure we have a valid mode
+case "$IMEI_MODE" in
+    "static"|"deterministic"|"random")
+        # Valid modes, keep as is
+        ;;
+    *)
+        logger -p warn -t blue-merle-stage2 "Invalid IMEI mode '$IMEI_MODE', defaulting to random"
+        IMEI_MODE="random"
+        ;;
+esac
+
+# Validate static IMEI if in static mode
+if [ "$IMEI_MODE" = "static" ]; then
+    if [ -z "$STATIC_IMEI" ] || [ ${#STATIC_IMEI} -ne 15 ] || ! echo "$STATIC_IMEI" | grep -q '^[0-9]*$'; then
+        logger -p warn -t blue-merle-stage2 "Invalid static IMEI '$STATIC_IMEI', falling back to random mode"
+        mcu_send_message "Invalid static   IMEI, using random"
+        IMEI_MODE="random"
+    fi
+fi
+
+# Execute the appropriate IMEI generation based on mode
 case "$IMEI_MODE" in
     "static")
-        mcu_send_message "Setting static      IMEI"
+        mcu_send_message "Setting static      IMEI: ${STATIC_IMEI:0:8}..."
+        logger -p notice -t blue-merle-stage2 "Setting static IMEI: $STATIC_IMEI"
         timeout 15 python3 /lib/blue-merle/imei_generate.py -s "$STATIC_IMEI"
         ;;
     "deterministic")
-        mcu_send_message "Setting deterministic   IMEI"
+        mcu_send_message "Setting deterministic   IMEI from IMSI"
+        logger -p notice -t blue-merle-stage2 "Setting deterministic IMEI"
         timeout 15 python3 /lib/blue-merle/imei_generate.py -d
         ;;
     *)
-        mcu_send_message "Setting random   IMEI"
+        mcu_send_message "Setting random      IMEI"
+        logger -p notice -t blue-merle-stage2 "Setting random IMEI"
         timeout 15 python3 /lib/blue-merle/imei_generate.py -r
         ;;
 esac
@@ -68,12 +112,13 @@ esac
 old_imei=$(cat /tmp/old_imei)
 new_imei=$(READ_IMEI)
 
-
 if [ "$old_imei" = "$new_imei" ]; then
 	mcu_send_message "WARNING:        Old IMEI equals new IMEI."
+	logger -p warn -t blue-merle-stage2 "IMEI unchanged: $old_imei"
 	sleep 3
 else
 	mcu_send_message  "IMEI Old:...... ${old_imei}IMEI New:...... ${new_imei}"
+	logger -p notice -t blue-merle-stage2 "Changed IMEI from ${old_imei} to ${new_imei}"
 	sleep 5
 	mkdir -p /tmp/modem.1-1.2
 	echo "$new_imei" > /tmp/modem.1-1.2/modem-imei
@@ -84,13 +129,10 @@ fi
 
 rm -f /tmp/old_imei
 
-logger -p notice -t blue-merle-toggle "Changed IMEI from ${old_imei} to ${new_imei}"
-
 mcu_send_message "The device will shutdown now."
 sleep 3
 mcu_send_message "You should      change your     location before booting again."
 sleep 5
-
 
 i=5
 until  [ $i -eq 0 ]
@@ -100,7 +142,7 @@ do
         sleep 1
 done
 
-logger -p notice -t blue-merle-toggle "Finished with Stage 2"
+logger -p notice -t blue-merle-stage2 "Finished with Stage 2"
 
 # Note: calling /sbin/poweroff directly results in the device rebooting into a broken state
 echo '{ "poweroff": "1" }' >/dev/ttyS0

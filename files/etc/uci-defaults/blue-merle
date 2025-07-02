@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# Create the config file if it doesn't exist
+if [ ! -f /etc/config/blue-merle ]; then
+    touch /etc/config/blue-merle
+    chown root:root /etc/config/blue-merle
+    chmod 644 /etc/config/blue-merle
+fi
+
+# Ensure proper ownership even if file exists
+chown root:root /etc/config/blue-merle
+chmod 644 /etc/config/blue-merle
+
+# Set default values (no quotes around the values!)
+uci -q get blue-merle.imei > /dev/null || {
+    uci set blue-merle.imei=imei
+    uci set blue-merle.imei.mode=random
+    uci set blue-merle.imei.static_value=
+    uci commit blue-merle
+}
+
+exit 0
