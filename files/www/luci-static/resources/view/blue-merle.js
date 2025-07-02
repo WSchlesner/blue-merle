@@ -428,13 +428,16 @@ function updateServiceButton(button, service, isEnabled) {
         indicator.className = 'bm-status-indicator ' + (isEnabled ? 'enabled' : 'disabled');
     }
     if (text) {
-        text.textContent = (isEnabled ? 'Disable' : 'Enable') + ' ' + service.charAt(0).toUpperCase() + service.slice(1);
+        // Use the stored display name instead of reconstructing from service name
+        var displayName = button.getAttribute('data-display-name') || service;
+        text.textContent = (isEnabled ? 'Disable' : 'Enable') + ' ' + displayName;
     }
 }
 
 function createServiceButton(service, displayName) {
     var button = E('button', { 
         'class': 'btn cbi-button',
+        'data-display-name': displayName,  // Store the proper display name
         'click': function() { toggleService(service, this); },
         'disabled': isReadonlyView 
     }, [
@@ -516,19 +519,6 @@ function handleSaveImeiConfig(ev) {
     });
 }
 
-function handleGenerateRandomImei(ev) {
-    var button = ev.target;
-    button.disabled = true;
-    button.textContent = _('Generating...');
-    
-    randomIMEI();
-    
-    setTimeout(function() {
-        button.disabled = false;
-        button.textContent = _('Generate New IMEI');
-    }, 2000);
-}
-
 return view.extend({
     load: function() {
         return Promise.resolve();
@@ -584,18 +574,7 @@ return view.extend({
                         'disabled': isReadonlyView 
                     }, [ _('Initiate SIM Swap Process') ]),
                     E('div', { 'class': 'bm-info-text' }, 
-                        _('Safely prepare device for SIM card replacement with new identity')
-                    )
-                ]),
-                E('div', { 'class': 'bm-button-group' }, [
-                    E('label', {}, _('Quick IMEI:')),
-                    E('button', { 
-                        'class': 'btn cbi-button-positive', 
-                        'click': handleGenerateRandomImei, 
-                        'disabled': isReadonlyView 
-                    }, [ _('Generate New IMEI') ]),
-                    E('div', { 'class': 'bm-info-text' }, 
-                        _('Generate and apply a new random IMEI immediately')
+                        _('Safely prepare device for SIM card replacement with new identity, will generate a random IMEI')
                     )
                 ])
             ]),
@@ -650,9 +629,9 @@ return view.extend({
                     E('label', {}, _('Network Randomization:')),
                     E('div', { 'class': 'bm-randomization-grid' }, [
                         createServiceButton('hostname', 'Hostname'),
-                        createServiceButton('bssid', 'BSSID/MAC'),
+                        createServiceButton('bssid', 'BSSID'),
                         createServiceButton('ssid', 'SSID'),
-                        createServiceButton('password', 'WiFi Password')
+                        createServiceButton('password', 'Password')
                     ])
                 ]),
                 E('div', { 'class': 'bm-info-text' }, 
