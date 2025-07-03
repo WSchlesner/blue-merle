@@ -14,6 +14,21 @@ check_service_state() {
     return $?
 }
 
+# Function to ensure service is executable before enable/disable operations
+service_executable() {
+    local service="$1"
+    if [ ! -x "/etc/init.d/$service" ]; then
+        chmod +x "/etc/init.d/$service"
+    fi
+}
+
+# Function to run a service (make executable and start)
+run_service() {
+    local service="$1"
+    service_executable "$service"
+    "/etc/init.d/$service" start
+}
+
 logger -p notice -t blue-merle-libexec  "Libexec $1"
 
 if [ "$1" == "read-imei" ]; then
@@ -50,54 +65,66 @@ elif [ "$1" == "write-imei" ]; then
 
 elif [ "$1" == "enable-ssid" ]; then
     show_message "Enabling SSID Randomization..."
+    service_executable blue-merle-ssid
     /etc/init.d/blue-merle-ssid enable
     logger -p notice -t blue-merle-libexec "Enabling SSID Randomization"
 
 elif [ "$1" == "disable-ssid" ]; then
     show_message "Disabling SSID Randomization..."
+    service_executable blue-merle-ssid
     /etc/init.d/blue-merle-ssid disable
     logger -p notice -t blue-merle-libexec "Disabling SSID Randomization"
 
 elif [ "$1" == "enable-bssid" ]; then
     show_message "Enabling BSSID/MAC Randomization..."
+    service_executable blue-merle-bssid-mac
     /etc/init.d/blue-merle-bssid-mac enable
     logger -p notice -t blue-merle-libexec "Enabling BSSID/MAC Randomization"
 
 elif [ "$1" == "disable-bssid" ]; then
     show_message "Disabling BSSID/MAC Randomization..."
+    service_executable blue-merle-bssid-mac
     /etc/init.d/blue-merle-bssid-mac disable
     logger -p notice -t blue-merle-libexec "Disabling BSSID/MAC Randomization"
 
 elif [ "$1" == "enable-password" ]; then
     show_message "Enabling Password Randomization..."
+    service_executable blue-merle-password
     /etc/init.d/blue-merle-password enable
     logger -p notice -t blue-merle-libexec "Enabling Password Randomization"
 
 elif [ "$1" == "disable-password" ]; then
     show_message "Disabling Password Randomization..."
+    service_executable blue-merle-password
     /etc/init.d/blue-merle-password disable
     logger -p notice -t blue-merle-libexec "Disabling Password Randomization"
 
 elif [ "$1" == "enable-hostname" ]; then
     show_message "Enabling Hostname Randomization..."
+    service_executable blue-merle-hostname
     /etc/init.d/blue-merle-hostname enable
     logger -p notice -t blue-merle-libexec "Enabling Hostname Randomization"
 
 elif [ "$1" == "disable-hostname" ]; then
     show_message "Disabling Hostname Randomization..."
+    service_executable blue-merle-hostname
     /etc/init.d/blue-merle-hostname disable
     logger -p notice -t blue-merle-libexec "Disabling Hostname Randomization"
 
 elif [ "$1" == "status-hostname" ]; then
+    service_executable blue-merle-hostname
     check_service_state blue-merle-hostname && echo "enabled" || echo "disabled"
 
 elif [ "$1" == "status-ssid" ]; then
+    service_executable blue-merle-ssid
     check_service_state blue-merle-ssid && echo "enabled" || echo "disabled"
 
 elif [ "$1" == "status-bssid" ]; then
+    service_executable blue-merle-bssid-mac
     check_service_state blue-merle-bssid-mac && echo "enabled" || echo "disabled"
 
 elif [ "$1" == "status-password" ]; then
+    service_executable blue-merle-password
     check_service_state blue-merle-password && echo "enabled" || echo "disabled"
 
 else
