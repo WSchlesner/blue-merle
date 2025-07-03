@@ -62,12 +62,14 @@ if [ -f /etc/config/blue-merle ]; then
         fi
     fi
     
-    # Debug output to help troubleshoot
+    # Debug output
     logger -p notice -t blue-merle-stage2 "Config file exists, IMEI_MODE='$IMEI_MODE', STATIC_IMEI='$STATIC_IMEI'"
     mcu_send_message "Config: Mode=$IMEI_MODE"
+    sleep 3
 else
     logger -p notice -t blue-merle-stage2 "Config file /etc/config/blue-merle not found, using defaults"
     mcu_send_message "No config file,  using random mode"
+    sleep 3
 fi
 
 # Ensure we have a valid mode
@@ -86,6 +88,7 @@ if [ "$IMEI_MODE" = "static" ]; then
     if [ -z "$STATIC_IMEI" ] || [ ${#STATIC_IMEI} -ne 15 ] || ! echo "$STATIC_IMEI" | grep -q '^[0-9]*$'; then
         logger -p warn -t blue-merle-stage2 "Invalid static IMEI '$STATIC_IMEI', falling back to random mode"
         mcu_send_message "Invalid static   IMEI, using random"
+        sleep 3
         IMEI_MODE="random"
     fi
 fi
@@ -94,16 +97,19 @@ fi
 case "$IMEI_MODE" in
     "static")
         mcu_send_message "Setting static      IMEI: ${STATIC_IMEI:0:8}..."
+        sleep 2
         logger -p notice -t blue-merle-stage2 "Setting static IMEI: $STATIC_IMEI"
         timeout 15 python3 /lib/blue-merle/imei_generate.py -s "$STATIC_IMEI"
         ;;
     "deterministic")
         mcu_send_message "Setting deterministic   IMEI from IMSI"
+        sleep 2
         logger -p notice -t blue-merle-stage2 "Setting deterministic IMEI"
         timeout 15 python3 /lib/blue-merle/imei_generate.py -d
         ;;
     *)
         mcu_send_message "Setting random      IMEI"
+        sleep 2
         logger -p notice -t blue-merle-stage2 "Setting random IMEI"
         timeout 15 python3 /lib/blue-merle/imei_generate.py -r
         ;;
