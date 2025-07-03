@@ -133,6 +133,13 @@ define Package/blue-merle/preinst
     # So we stop that process now, have the database put onto volatile storage
     # and start the service after installation
     /etc/init.d/gl_clients stop
+    
+    # Stop and disable all blue-merle services before installation to prevent auto-execution
+    for service in blue-merle-hostname blue-merle-password blue-merle-ssid blue-merle-wifi-down blue-merle-wifi-reload; do
+        if [ -f "/etc/init.d/$$service" ]; then
+            /etc/init.d/$$service disable 2>/dev/null || true
+        fi
+    done
 endef
 
 define Package/blue-merle/postinst
@@ -151,6 +158,8 @@ define Package/blue-merle/postinst
 	/etc/init.d/blue-merle-ssid disable 2>/dev/null || true
 	/etc/init.d/blue-merle-wifi-down disable 2>/dev/null || true
 	/etc/init.d/blue-merle-wifi-reload disable 2>/dev/null || true
+	/etc/init.d/blue-merle-bssid-mac disable 2>/dev/null || true
+	/etc/init.d/volatile-client-macs disable 2>/dev/null || true
 
 	# Only enable the two services that should run by default
 	/etc/init.d/volatile-client-macs enable
@@ -166,22 +175,14 @@ define Package/blue-merle/prerm
 	#!/bin/sh
 	[ -n "$${IPKG_INSTROOT}" ] && exit 0	# if run within buildroot exit
 	
-	# Stop and disable all services
-	/etc/init.d/volatile-client-macs stop
-	/etc/init.d/blue-merle-bssid-mac stop
-	/etc/init.d/blue-merle-hostname stop
-	/etc/init.d/blue-merle-password stop
-	/etc/init.d/blue-merle-ssid stop
-	/etc/init.d/blue-merle-wifi-down stop
-	/etc/init.d/blue-merle-wifi-reload stop
-	
-	/etc/init.d/volatile-client-macs disable
-	/etc/init.d/blue-merle-bssid-mac disable
-	/etc/init.d/blue-merle-hostname disable
-	/etc/init.d/blue-merle-password disable
-	/etc/init.d/blue-merle-ssid disable
-	/etc/init.d/blue-merle-wifi-down disable
-	/etc/init.d/blue-merle-wifi-reload disable
+	# Only disable services (disable automatically stops them first)
+	/etc/init.d/volatile-client-macs disable 2>/dev/null || true
+	/etc/init.d/blue-merle-bssid-mac disable 2>/dev/null || true
+	/etc/init.d/blue-merle-hostname disable 2>/dev/null || true
+	/etc/init.d/blue-merle-password disable 2>/dev/null || true
+	/etc/init.d/blue-merle-ssid disable 2>/dev/null || true
+	/etc/init.d/blue-merle-wifi-down disable 2>/dev/null || true
+	/etc/init.d/blue-merle-wifi-reload disable 2>/dev/null || true
 endef
 
 define Package/blue-merle/postrm
