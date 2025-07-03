@@ -42,14 +42,16 @@ define Package/blue-merle/install
 	# Install configuration files
 	$(INSTALL_DATA) ./files/etc/config/blue-merle $(1)/etc/config/
 	
-	# Install init scripts with executable permissions
+	# Install init scripts - services that auto-start get executable permissions
 	$(INSTALL_BIN) ./files/etc/init.d/blue-merle-bssid-mac $(1)/etc/init.d/
-	$(INSTALL_BIN) ./files/etc/init.d/blue-merle-hostname $(1)/etc/init.d/
-	$(INSTALL_BIN) ./files/etc/init.d/blue-merle-password $(1)/etc/init.d/
-	$(INSTALL_BIN) ./files/etc/init.d/blue-merle-ssid $(1)/etc/init.d/
-	$(INSTALL_BIN) ./files/etc/init.d/blue-merle-wifi-down $(1)/etc/init.d/
-	$(INSTALL_BIN) ./files/etc/init.d/blue-merle-wifi-reload $(1)/etc/init.d/
 	$(INSTALL_BIN) ./files/etc/init.d/volatile-client-macs $(1)/etc/init.d/
+	
+	# Install init scripts without executable permissions to prevent auto-execution
+	$(INSTALL_DATA) ./files/etc/init.d/blue-merle-hostname $(1)/etc/init.d/
+	$(INSTALL_DATA) ./files/etc/init.d/blue-merle-password $(1)/etc/init.d/
+	$(INSTALL_DATA) ./files/etc/init.d/blue-merle-ssid $(1)/etc/init.d/
+	$(INSTALL_DATA) ./files/etc/init.d/blue-merle-wifi-down $(1)/etc/init.d/
+	$(INSTALL_DATA) ./files/etc/init.d/blue-merle-wifi-reload $(1)/etc/init.d/
 	
 	# Install gl-switch.d scripts
 	$(INSTALL_BIN) ./files/etc/gl-switch.d/sim.sh $(1)/etc/gl-switch.d/
@@ -135,7 +137,7 @@ define Package/blue-merle/preinst
     /etc/init.d/gl_clients stop
     
     # Stop and disable all blue-merle services before installation to prevent auto-execution
-    for service in blue-merle-hostname blue-merle-password blue-merle-ssid blue-merle-wifi-down blue-merle-wifi-reload; do
+    for service in blue-merle-hostname blue-merle-password blue-merle-ssid blue-merle-wifi-down blue-merle-wifi-reload blue-merle-bssid-mac volatile-client-macs; do
         if [ -f "/etc/init.d/$$service" ]; then
             /etc/init.d/$$service disable 2>/dev/null || true
         fi
@@ -152,6 +154,13 @@ define Package/blue-merle/postinst
 		uci commit switch-button
 	fi
 
+	# Make the manual-trigger services executable (they were installed as data files)
+	chmod +x /etc/init.d/blue-merle-hostname
+	chmod +x /etc/init.d/blue-merle-password
+	chmod +x /etc/init.d/blue-merle-ssid
+	chmod +x /etc/init.d/blue-merle-wifi-down
+	chmod +x /etc/init.d/blue-merle-wifi-reload
+	
 	# Explicitly disable all services first to ensure clean state
 	/etc/init.d/blue-merle-hostname disable 2>/dev/null || true
 	/etc/init.d/blue-merle-password disable 2>/dev/null || true
