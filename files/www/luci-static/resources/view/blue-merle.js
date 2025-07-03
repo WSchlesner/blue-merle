@@ -684,7 +684,7 @@ return view.extend({
                     E('label', {}, _('Network Randomization:')),
                     E('div', { 'class': 'bm-randomization-grid' }, [
                         createServiceButton('hostname', 'Hostname'),
-                        createServiceButton('bssid', 'BSSID'),
+                        createServiceButton('bssid', 'BSSID/MACADDR'),
                         createServiceButton('ssid', 'SSID'),
                         createServiceButton('password', 'Password')
                     ])
