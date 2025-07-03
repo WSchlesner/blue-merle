@@ -139,13 +139,24 @@ define Package/blue-merle/postinst
 	#!/bin/sh
 	[ -n "$${IPKG_INSTROOT}" ] && exit 0	# if run within buildroot exit
 	
-	uci set switch-button.@main[0].func='sim'
-	uci commit switch-button
+	# Only set switch-button if the config exists
+	if uci -q get switch-button.@main[0] >/dev/null 2>&1; then
+		uci set switch-button.@main[0].func='sim'
+		uci commit switch-button
+	fi
 
-	# Enable and start services
+	# Explicitly disable all services first to ensure clean state
+	/etc/init.d/blue-merle-hostname disable 2>/dev/null || true
+	/etc/init.d/blue-merle-password disable 2>/dev/null || true
+	/etc/init.d/blue-merle-ssid disable 2>/dev/null || true
+	/etc/init.d/blue-merle-wifi-down disable 2>/dev/null || true
+	/etc/init.d/blue-merle-wifi-reload disable 2>/dev/null || true
+
+	# Only enable the two services that should run by default
 	/etc/init.d/volatile-client-macs enable
 	/etc/init.d/blue-merle-bssid-mac enable
 
+	# Restart gl_clients service
 	/etc/init.d/gl_clients start
 
 	echo {\"msg\": \"Successfully installed Blue Merle\"} > /dev/ttyS0
@@ -155,20 +166,33 @@ define Package/blue-merle/prerm
 	#!/bin/sh
 	[ -n "$${IPKG_INSTROOT}" ] && exit 0	# if run within buildroot exit
 	
-	# Stop and disable services
+	# Stop and disable all services
 	/etc/init.d/volatile-client-macs stop
 	/etc/init.d/blue-merle-bssid-mac stop
+	/etc/init.d/blue-merle-hostname stop
+	/etc/init.d/blue-merle-password stop
+	/etc/init.d/blue-merle-ssid stop
+	/etc/init.d/blue-merle-wifi-down stop
+	/etc/init.d/blue-merle-wifi-reload stop
 	
 	/etc/init.d/volatile-client-macs disable
 	/etc/init.d/blue-merle-bssid-mac disable
+	/etc/init.d/blue-merle-hostname disable
+	/etc/init.d/blue-merle-password disable
+	/etc/init.d/blue-merle-ssid disable
+	/etc/init.d/blue-merle-wifi-down disable
+	/etc/init.d/blue-merle-wifi-reload disable
 endef
 
 define Package/blue-merle/postrm
 	#!/bin/sh
 	[ -n "$${IPKG_INSTROOT}" ] && exit 0	# if run within buildroot exit
 	
-	uci set switch-button.@main[0].func='tor'
-	uci commit switch-button
+	# Only restore switch-button if the config exists
+	if uci -q get switch-button.@main[0] >/dev/null 2>&1; then
+		uci set switch-button.@main[0].func='tor'
+		uci commit switch-button
+	fi
 	
 	# Clean up any remaining files
 	rm -rf /lib/blue-merle
