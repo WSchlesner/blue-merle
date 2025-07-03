@@ -25,6 +25,7 @@ start() {
 }
 
 stop() {
+    echo "Shredding Blue-Merle Volatile Client MACs Service"
 	shred /etc/oui-tertf/client.db ||  rm -f /etc/oui-tertf/client.db
 }
 

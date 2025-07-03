@@ -2,7 +2,7 @@
 
 . /lib/blue-merle/functions.sh
 
-START=9
+#START=9
 STOP=99
 
 start(){
