@@ -133,13 +133,6 @@ define Package/blue-merle/preinst
     # So we stop that process now, have the database put onto volatile storage
     # and start the service after installation
     /etc/init.d/gl_clients stop
-    
-    # Stop and disable all blue-merle services before installation to prevent auto-execution
-    for service in blue-merle-hostname blue-merle-password blue-merle-ssid; do
-        if [ -f "/etc/init.d/$$service" ]; then
-            /etc/init.d/$$service disable 2>/dev/null || true
-        fi
-    done
 endef
 
 define Package/blue-merle/postinst
