@@ -50,8 +50,6 @@ define Package/blue-merle/install
 	$(INSTALL_DATA) ./files/etc/init.d/blue-merle-hostname $(1)/etc/init.d/
 	$(INSTALL_DATA) ./files/etc/init.d/blue-merle-password $(1)/etc/init.d/
 	$(INSTALL_DATA) ./files/etc/init.d/blue-merle-ssid $(1)/etc/init.d/
-	$(INSTALL_DATA) ./files/etc/init.d/blue-merle-wifi-down $(1)/etc/init.d/
-	$(INSTALL_DATA) ./files/etc/init.d/blue-merle-wifi-reload $(1)/etc/init.d/
 	
 	# Install gl-switch.d scripts
 	$(INSTALL_BIN) ./files/etc/gl-switch.d/sim.sh $(1)/etc/gl-switch.d/
@@ -137,7 +135,7 @@ define Package/blue-merle/preinst
     /etc/init.d/gl_clients stop
     
     # Stop and disable all blue-merle services before installation to prevent auto-execution
-    for service in blue-merle-hostname blue-merle-password blue-merle-ssid blue-merle-wifi-down blue-merle-wifi-reload; do
+    for service in blue-merle-hostname blue-merle-password blue-merle-ssid; do
         if [ -f "/etc/init.d/$$service" ]; then
             /etc/init.d/$$service disable 2>/dev/null || true
         fi
@@ -153,15 +151,6 @@ define Package/blue-merle/postinst
 		uci set switch-button.@main[0].func='sim'
 		uci commit switch-button
 	fi
-	
-	# Explicitly disable all services first to ensure clean state
-	/etc/init.d/blue-merle-hostname disable 2>/dev/null || true
-	/etc/init.d/blue-merle-password disable 2>/dev/null || true
-	/etc/init.d/blue-merle-ssid disable 2>/dev/null || true
-	/etc/init.d/blue-merle-wifi-down disable 2>/dev/null || true
-	/etc/init.d/blue-merle-wifi-reload disable 2>/dev/null || true
-	/etc/init.d/blue-merle-bssid-mac disable 2>/dev/null || true
-	/etc/init.d/volatile-client-macs disable 2>/dev/null || true
 
 	# Only enable the two services that should run by default
 	/etc/init.d/volatile-client-macs enable
@@ -177,28 +166,62 @@ define Package/blue-merle/prerm
 	#!/bin/sh
 	[ -n "$${IPKG_INSTROOT}" ] && exit 0	# if run within buildroot exit
 	
+	/etc/init.d/gl_clients stop 2>/dev/null || true
+
 	# Only disable services (disable automatically stops them first)
 	/etc/init.d/volatile-client-macs disable 2>/dev/null || true
 	/etc/init.d/blue-merle-bssid-mac disable 2>/dev/null || true
 	/etc/init.d/blue-merle-hostname disable 2>/dev/null || true
 	/etc/init.d/blue-merle-password disable 2>/dev/null || true
 	/etc/init.d/blue-merle-ssid disable 2>/dev/null || true
-	/etc/init.d/blue-merle-wifi-down disable 2>/dev/null || true
-	/etc/init.d/blue-merle-wifi-reload disable 2>/dev/null || true
 endef
 
 define Package/blue-merle/postrm
 	#!/bin/sh
 	[ -n "$${IPKG_INSTROOT}" ] && exit 0	# if run within buildroot exit
 	
+	# Clean up UCI configuration
+	uci -q delete blue-merle 2>/dev/null || true
+	uci commit 2>/dev/null || true
+
 	# Only restore switch-button if the config exists
 	if uci -q get switch-button.@main[0] >/dev/null 2>&1; then
 		uci set switch-button.@main[0].func='tor'
 		uci commit switch-button
 	fi
 	
-	# Clean up any remaining files
-	rm -rf /lib/blue-merle
+	# Clean up installed files and directories
+	rm -rf /lib/blue-merle/*
+	rm -f /etc/config/blue-merle
+	rm -f /usr/bin/blue-merle
+	rm -f /usr/bin/blue-merle-switch-stage1
+	rm -f /usr/bin/blue-merle-switch-stage2
+	rm -f /usr/bin/sim_switch
+	rm -f /usr/libexec/blue-merle
+	rm -f /etc/gl-switch.d/sim.sh
+	rm -f /etc/uci-defaults/blue-merle
+	rm -f /etc/init.d/blue-merle-bssid-mac
+	rm -f /etc/init.d/volatile-client-macs
+	rm -f /etc/init.d/blue-merle-hostname
+	rm -f /etc/init.d/blue-merle-password
+	rm -f /etc/init.d/blue-merle-ssid
+	
+	# Clean up LuCI web interface files
+	rm -f /usr/share/luci/menu.d/luci-app-blue-merle.json
+	rm -f /usr/share/rpcd/acl.d/luci-app-blue-merle.json
+	rm -f /www/luci-static/resources/view/blue-merle.js
+	
+	# Clean up temporary files
+	rm -rf /tmp/blue-merle* 2>/dev/null || true
+
+	# Clear LuCI cache to remove broken references
+	rm -f /tmp/luci-indexcache* 2>/dev/null || true
+	rm -rf /tmp/luci-modulecache* 2>/dev/null || true
+	
+	# Restart gl_clients service (in case it was stopped during removal)
+	/etc/init.d/gl_clients start 2>/dev/null || true
+	
+	echo "Blue Merle package removed successfully"
 endef
 
 $(eval $(call BuildPackage,blue-merle))
