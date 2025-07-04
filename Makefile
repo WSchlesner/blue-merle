@@ -210,9 +210,6 @@ define Package/blue-merle/postrm
 	rm -f /usr/share/luci/menu.d/luci-app-blue-merle.json
 	rm -f /usr/share/rpcd/acl.d/luci-app-blue-merle.json
 	rm -f /www/luci-static/resources/view/blue-merle.js
-	
-	# Clean up temporary files
-	rm -rf /tmp/blue-merle* 2>/dev/null || true
 
 	# Clear LuCI cache to remove broken references
 	rm -f /tmp/luci-indexcache* 2>/dev/null || true
