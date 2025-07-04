@@ -1,0 +1,28 @@
+{
+  "menu": {
+    "blue-merle": {
+      "id": "blue-merle",
+      "name": "Blue Merle",
+      "path": "/blue-merle",
+      "icon": "iconfont icon-security",
+      "parent": "applications",
+      "order": 100,
+      "component": "BlueMerleComponent",
+      "meta": {
+        "requiresAuth": true,
+        "title": "Blue Merle - Identity Randomization"
+      }
+    }
+  },
+  "routes": [
+    {
+      "path": "/blue-merle",
+      "name": "blue-merle",
+      "component": "BlueMerleComponent",
+      "meta": {
+        "requiresAuth": true,
+        "title": "Blue Merle"
+      }
+    }
+  ]
+}

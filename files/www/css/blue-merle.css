@@ -1,0 +1,311 @@
+/* Blue-Merle Styles for GL-iNet SDK4 UI */
+
+#blue-merle-wrapper {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.page-header {
+    margin-bottom: 30px;
+    border-bottom: 1px solid #e5e5e5;
+    padding-bottom: 15px;
+}
+
+.page-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 24px;
+    font-weight: 500;
+}
+
+.bm-main-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1em;
+    margin: 1em 0;
+    align-items: start;
+}
+
+.bm-control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+}
+
+.bm-control-group label {
+    font-weight: bold;
+    color: #404040;
+    margin-bottom: 0.25em;
+}
+
+.bm-control-group input {
+    padding: 0.5em;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #f8f8f8;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.bm-control-group input:disabled {
+    background: #f0f0f0;
+    color: #666;
+}
+
+.bm-section {
+    margin: 1.5em 0;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.bm-section h3 {
+    margin: 0 0 1em 0;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #404040;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 0.5em;
+}
+
+.bm-form-group {
+    display: flex;
+    align-items: center;
+    margin: 0.75em 0;
+    min-height: 2.5em;
+}
+
+.bm-form-group label {
+    display: inline-block;
+    width: 12em;
+    font-weight: normal;
+    margin-right: 1em;
+    vertical-align: top;
+    line-height: 1.8;
+    color: #404040;
+}
+
+.bm-form-group select,
+.bm-form-group input {
+    padding: 0.3em 0.5em;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #fff;
+    min-width: 15em;
+    color: #000;
+}
+
+.bm-form-group select:focus,
+.bm-form-group input:focus {
+    border-color: #0099cc;
+    outline: none;
+    box-shadow: 0 0 3px rgba(0,153,204,0.3);
+}
+
+.bm-button-group {
+    margin: 1em 0;
+    padding: 1em 0;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 0.5em;
+    align-items: center;
+}
+
+.bm-button-group.primary {
+    border-top: 2px solid #0099cc;
+    background: #f8fcff;
+    padding: 1em;
+    border-radius: 3px;
+    margin: 1.5em 0;
+}
+
+.bm-button-group label {
+    font-weight: bold;
+    color: #404040;
+    margin-right: 1em;
+    min-width: 8em;
+}
+
+.bm-randomization-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5em;
+    margin-top: 0.5em;
+}
+
+.bm-status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5em;
+    background: #ccc;
+}
+
+.bm-status-indicator.enabled {
+    background: #4CAF50;
+}
+
+.bm-status-indicator.disabled {
+    background: #f44336;
+}
+
+.bm-info-text {
+    color: #666;
+    font-size: 0.9em;
+    margin-top: 0.5em;
+    font-style: italic;
+}
+
+.bm-warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 3px;
+    padding: 0.75em;
+    margin: 1em 0;
+    color: #856404;
+}
+
+.bm-warning::before {
+    content: "⚠ ";
+    font-weight: bold;
+}
+
+/* Modal styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.modal-buttons {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* Button styles consistent with GL-iNet theme */
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background: #337ab7;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #286090;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn-success {
+    background: #5cb85c;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #449d44;
+}
+
+.btn-danger {
+    background: #d9534f;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c9302c;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Loading animation */
+.spinning {
+    position: relative;
+}
+
+.spinning::after {
+    content: "";
+    position: absolute;
+    right: -30px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: translateY(-50%) rotate(0deg); }
+    100% { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .bm-main-controls {
+        grid-template-columns: 1fr;
+    }
+    
+    .bm-randomization-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .bm-form-group {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .bm-form-group label {
+        width: auto;
+        margin-bottom: 0.5em;
+    }
+    
+    .modal-content {
+        margin: 20px;
+        width: auto;
+    }
+}

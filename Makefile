@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=blue-merle
-PKG_VERSION:=4.0.0
+PKG_VERSION:=4.0.1
 PKG_RELEASE:=$(AUTORELEASE)
 
 PKG_MAINTAINER:=Matthias <matthias@srlabs.de>
@@ -39,6 +39,10 @@ define Package/blue-merle/install
 	$(INSTALL_DIR) $(1)/usr/share/rpcd/acl.d
 	$(INSTALL_DIR) $(1)/www/luci-static/resources/view
 	
+	# NEW: GL-iNet SDK4 UI integration directories
+	$(INSTALL_DIR) $(1)/www/css
+	$(INSTALL_DIR) $(1)/www/js/blue-merle
+	
 	# Install configuration files
 	$(INSTALL_DATA) ./files/etc/config/blue-merle $(1)/etc/config/
 	
@@ -72,10 +76,16 @@ define Package/blue-merle/install
 	$(INSTALL_DATA) ./files/lib/blue-merle/luhn.lua $(1)/lib/blue-merle/
 	$(INSTALL_DATA) ./files/lib/blue-merle/words $(1)/lib/blue-merle/
 	
-	# Install LuCI web interface files
+	# Install LuCI web interface files (OPTIONAL - remove if you don't want LuCI interface)
 	$(INSTALL_DATA) ./files/usr/share/luci/menu.d/luci-app-blue-merle.json $(1)/usr/share/luci/menu.d/
 	$(INSTALL_DATA) ./files/usr/share/rpcd/acl.d/luci-app-blue-merle.json $(1)/usr/share/rpcd/acl.d/
 	$(INSTALL_DATA) ./files/www/luci-static/resources/view/blue-merle.js $(1)/www/luci-static/resources/view/
+	
+	# NEW: Install GL-iNet SDK4 UI files
+	$(INSTALL_DATA) ./files/www/js/blue-merle/blue-merle-main.js $(1)/www/js/blue-merle/
+	$(INSTALL_DATA) ./files/www/js/blue-merle/blue-merle-component.js $(1)/www/js/blue-merle/
+	$(INSTALL_DATA) ./files/www/js/blue-merle/menu-config.json $(1)/www/js/blue-merle/
+	$(INSTALL_DATA) ./files/www/css/blue-merle.css $(1)/www/css/
 endef
 
 define Package/blue-merle/preinst
@@ -152,6 +162,12 @@ define Package/blue-merle/postinst
 
 	# Restart gl_clients service
 	/etc/init.d/gl_clients start
+
+	# Create compressed UI bundle for GL-iNet framework
+	gzip -c /www/js/blue-merle/blue-merle-main.js > /www/views/gl-sdk4-ui-blue-merle.common.js.gz
+
+	# Restart web server to load new UI components
+	/etc/init.d/uhttpd restart 2>/dev/null || true
 
 	echo {\"msg\": \"Successfully installed Blue Merle\"} > /dev/ttyS0
 endef
