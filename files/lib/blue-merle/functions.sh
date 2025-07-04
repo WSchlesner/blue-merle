@@ -29,8 +29,8 @@ RANDOMIZE_MACADDR () {
 
 #Generate Pseudo Random SSID for WiFi Interfaces
 RANDOMIZE_SSID() {
-    WORD1=$(grep '^.\{1,4\}$' /usr/share/dict/words | shuf -n1 | tr -d "'")
-    WORD2=$(grep '^.\{1,4\}$' /usr/share/dict/words | shuf -n1 | tr -d "'")
+    WORD1=$(grep '^.\{1,4\}$' /lib/blue-merle/words | awk 'BEGIN{srand()}{line[NR]=$0}END{print line[int(rand()*NR)+1]}' | tr -d "'")
+    WORD2=$(grep '^.\{1,4\}$' /lib/blue-merle/words | awk 'BEGIN{srand()}{line[NR]=$0}END{print line[int(rand()*NR)+1]}' | tr -d "'")
     NEW_SSID=$(echo "${WORD1}${WORD2}" | cut -c1-8)
     uci set wireless.@wifi-iface[0].ssid="$NEW_SSID"
     uci set wireless.@wifi-iface[1].ssid="$NEW_SSID"
