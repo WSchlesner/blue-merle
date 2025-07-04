@@ -29,11 +29,20 @@ RANDOMIZE_MACADDR () {
 
 #Generate Pseudo Random SSID for WiFi Interfaces
 RANDOMIZE_SSID() {
-    #NEW_SSID="Mudi_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 5)"
-    NEW_SSID="$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8)"
+    WORD1=$(grep '^.\{1,4\}$' /usr/share/dict/words | shuf -n1 | tr -d "'")
+    WORD2=$(grep '^.\{1,4\}$' /usr/share/dict/words | shuf -n1 | tr -d "'")
+    NEW_SSID=$(echo "${WORD1}${WORD2}" | cut -c1-8)
     uci set wireless.@wifi-iface[0].ssid="$NEW_SSID"
     uci set wireless.@wifi-iface[1].ssid="$NEW_SSID"
 }
+
+#Generate Pseudo Random SSID for WiFi Interfaces
+#RANDOMIZE_SSID() {
+    #NEW_SSID="Mudi_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 5)"
+    #NEW_SSID="$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8)"
+    #uci set wireless.@wifi-iface[0].ssid="$NEW_SSID"
+    #uci set wireless.@wifi-iface[1].ssid="$NEW_SSID"
+#}
 
 #Randomzie Password for the WiFi Interfaces
 RANDOMIZE_PASSWORD(){

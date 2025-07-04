@@ -70,6 +70,7 @@ define Package/blue-merle/install
 	$(INSTALL_BIN) ./files/lib/blue-merle/functions.sh $(1)/lib/blue-merle/
 	$(INSTALL_BIN) ./files/lib/blue-merle/imei_generate.py $(1)/lib/blue-merle/
 	$(INSTALL_DATA) ./files/lib/blue-merle/luhn.lua $(1)/lib/blue-merle/
+	$(INSTALL_DATA) ./files/lib/blue-merle/words $(1)/lib/blue-merle/
 	
 	# Install LuCI web interface files
 	$(INSTALL_DATA) ./files/usr/share/luci/menu.d/luci-app-blue-merle.json $(1)/usr/share/luci/menu.d/
