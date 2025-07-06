@@ -284,16 +284,19 @@ function callBlueMerle(arg) {
 function loadTacDatabase() {
     return fs.read(TAC_DB_PATH).then(function(data) {
         try {
+            console.log("Raw TAC database data:", data.substring(0, 200) + "...");
             tacDatabase = JSON.parse(data);
-            console.log("TAC database loaded successfully");
+            console.log("TAC database loaded successfully:", tacDatabase);
+            console.log("Available categories:", Object.keys(tacDatabase.categories || {}));
             return tacDatabase;
         } catch (e) {
             console.log("Error parsing TAC database:", e);
+            console.log("Raw data that failed to parse:", data);
             tacDatabase = null;
             return null;
         }
     }).catch(function(err) {
-        console.log("Error loading TAC database:", err);
+        console.log("Error loading TAC database from path:", TAC_DB_PATH, "Error:", err);
         tacDatabase = null;
         return null;
     });
@@ -661,16 +664,28 @@ function updateTacConfigVisibility() {
 
 function updateTacValueOptions() {
     var tacValueSelect = document.getElementById('tac-value-select');
-    if (!tacValueSelect || !tacDatabase || !currentTacCategory) return;
+    console.log("updateTacValueOptions called, tacValueSelect:", tacValueSelect, "tacDatabase:", tacDatabase, "currentTacCategory:", currentTacCategory);
     
+    if (!tacValueSelect || !tacDatabase || !currentTacCategory) {
+        console.log("Missing required elements for TAC value update");
+        return;
+    }
+    
+    // Clear existing options
     tacValueSelect.innerHTML = '';
     tacValueSelect.appendChild(E('option', { 'value': '' }, _('Select TAC')));
     
+    // Add TACs from selected category
     if (tacDatabase.categories && tacDatabase.categories[currentTacCategory]) {
         var tacs = tacDatabase.categories[currentTacCategory].tacs;
+        console.log("Found TACs for category", currentTacCategory, ":", tacs);
         tacs.forEach(function(tac) {
+            console.log("Adding TAC option:", tac);
             tacValueSelect.appendChild(E('option', { 'value': tac }, tac));
         });
+        console.log("Finished populating TAC values, total options:", tacValueSelect.options.length);
+    } else {
+        console.log("No TACs found for category:", currentTacCategory);
     }
 }
 
@@ -697,16 +712,33 @@ function updateSaveButtonState() {
 
 function populateTacCategoryOptions() {
     var tacCategorySelect = document.getElementById('tac-category-select');
-    if (!tacCategorySelect || !tacDatabase) return;
+    if (!tacCategorySelect) {
+        console.log("tac-category-select element not found");
+        return;
+    }
     
+    console.log("populateTacCategoryOptions called, tacDatabase:", tacDatabase);
+    
+    if (!tacDatabase) {
+        console.log("tacDatabase is null or undefined");
+        return;
+    }
+    
+    // Clear existing options
     tacCategorySelect.innerHTML = '';
     tacCategorySelect.appendChild(E('option', { 'value': '' }, _('Select Category')));
     
+    // Add categories from database
     if (tacDatabase.categories) {
+        console.log("Found categories:", Object.keys(tacDatabase.categories));
         Object.keys(tacDatabase.categories).forEach(function(categoryKey) {
             var category = tacDatabase.categories[categoryKey];
+            console.log("Adding category:", categoryKey, "with name:", category.name);
             tacCategorySelect.appendChild(E('option', { 'value': categoryKey }, category.name));
         });
+        console.log("Finished populating categories, total options:", tacCategorySelect.options.length);
+    } else {
+        console.log("No categories found in tacDatabase");
     }
 }
 
