@@ -69,6 +69,7 @@ define Package/blue-merle/install
 	# Install library files
 	$(INSTALL_BIN) ./files/lib/blue-merle/functions.sh $(1)/lib/blue-merle/
 	$(INSTALL_BIN) ./files/lib/blue-merle/imei_generate.py $(1)/lib/blue-merle/
+	$(INSTALL_DATA) ./files/lib/blue-merle/tac_database.json $(1)/lib/blue-merle/
 	$(INSTALL_DATA) ./files/lib/blue-merle/luhn.lua $(1)/lib/blue-merle/
 	$(INSTALL_DATA) ./files/lib/blue-merle/words $(1)/lib/blue-merle/
 	

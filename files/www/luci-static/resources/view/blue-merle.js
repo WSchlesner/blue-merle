@@ -6,6 +6,7 @@
 'require uci';
 
 const CONFIG_PATH = '/etc/config/blue-merle';
+const TAC_DB_PATH = '/lib/blue-merle/tac_database.json';
 
 var css = '                             \
     .bm-main-controls {                 \
@@ -159,9 +160,51 @@ var css = '                             \
         font-weight: bold;              \
     }                                   \
                                         \
+    .bm-tac-group {                     \
+        border: 1px solid #ddd;         \
+        border-radius: 5px;             \
+        padding: 1em;                   \
+        margin: 1em 0;                  \
+        background: #f9f9f9;            \
+    }                                   \
+                                        \
+    .bm-tac-group h4 {                  \
+        margin: 0 0 0.75em 0;           \
+        font-size: 1em;                 \
+        font-weight: bold;              \
+        color: #404040;                 \
+    }                                   \
+                                        \
+    .bm-tac-row {                       \
+        display: flex;                  \
+        align-items: center;            \
+        margin: 0.5em 0;                \
+        gap: 1em;                       \
+    }                                   \
+                                        \
+    .bm-tac-row label {                 \
+        min-width: 8em;                 \
+        font-weight: normal;            \
+        margin: 0;                      \
+    }                                   \
+                                        \
+    .bm-tac-row select,                 \
+    .bm-tac-row input {                 \
+        flex: 1;                        \
+        min-width: 12em;                \
+    }                                   \
+                                        \
     #static-imei-input {                \
         width: 15em;                    \
         font-family: monospace;         \
+    }                                   \
+                                        \
+    #tac-value-input {                  \
+        font-family: monospace;         \
+    }                                   \
+                                        \
+    .bm-hidden {                        \
+        display: none !important;       \
     }                                   \
                                         \
     @media (max-width: 768px) {         \
@@ -178,6 +221,13 @@ var css = '                             \
         .bm-form-group label {          \
             width: auto;                \
             margin-bottom: 0.5em;       \
+        }                               \
+        .bm-tac-row {                   \
+            flex-direction: column;     \
+            align-items: flex-start;    \
+        }                               \
+        .bm-tac-row label {             \
+            min-width: auto;            \
         }                               \
     }                                   \
 ';
@@ -198,6 +248,14 @@ var packages = {
 var languages = ['en'];
 
 var currentDisplayMode = 'available', currentDisplayRows = [];
+
+// Global variables for configuration
+var currentImeiMode = 'random';
+var currentStaticImei = '';
+var currentTacMode = 'random_any';
+var currentTacCategory = '';
+var currentTacValue = '';
+var tacDatabase = null;
 
 function handleReset(ev) {
 }
@@ -220,6 +278,25 @@ function callBlueMerle(arg) {
             throw err;
         }
     );
+}
+
+// Load TAC database
+function loadTacDatabase() {
+    return fs.read(TAC_DB_PATH).then(function(data) {
+        try {
+            tacDatabase = JSON.parse(data);
+            console.log("TAC database loaded successfully");
+            return tacDatabase;
+        } catch (e) {
+            console.log("Error parsing TAC database:", e);
+            tacDatabase = null;
+            return null;
+        }
+    }).catch(function(err) {
+        console.log("Error loading TAC database:", err);
+        tacDatabase = null;
+        return null;
+    });
 }
 
 function readIMEI() {
@@ -430,7 +507,6 @@ function updateServiceButton(button, service, isEnabled) {
         indicator.className = 'bm-status-indicator ' + (isEnabled ? 'enabled' : 'disabled');
     }
     if (text) {
-        // Use the stored display name instead of reconstructing from service name
         var displayName = button.getAttribute('data-display-name') || service;
         text.textContent = (isEnabled ? 'Disable' : 'Enable') + ' ' + displayName;
     }
@@ -439,7 +515,7 @@ function updateServiceButton(button, service, isEnabled) {
 function createServiceButton(service, displayName) {
     var button = E('button', { 
         'class': 'btn cbi-button',
-        'data-display-name': displayName,  // Store the proper display name
+        'data-display-name': displayName,
         'click': function() { toggleService(service, this); },
         'disabled': isReadonlyView 
     }, [
@@ -460,20 +536,25 @@ function readUciConfig() {
         uci.load('blue-merle').then(function() {
             var config = {
                 imei_mode: uci.get('blue-merle', 'imei', 'mode') || 'random',
-                static_imei: uci.get('blue-merle', 'imei', 'static_value') || ''
+                static_imei: uci.get('blue-merle', 'imei', 'static_value') || '',
+                tac_mode: uci.get('blue-merle', 'imei', 'tac_mode') || 'random_any',
+                tac_category: uci.get('blue-merle', 'imei', 'tac_category') || '',
+                tac_value: uci.get('blue-merle', 'imei', 'tac_value') || ''
             };
             resolve(config);
         }).catch(function(err) {
-            // If config doesn't exist, return defaults
             resolve({
                 imei_mode: 'random',
-                static_imei: ''
+                static_imei: '',
+                tac_mode: 'random_any',
+                tac_category: '',
+                tac_value: ''
             });
         });
     });
 }
 
-// Helper to write UCI config - Improved version with better error handling
+// Helper to write UCI config
 function writeUciConfig(config) {
     return new Promise(function(resolve, reject) {
         console.log("Attempting to write UCI config:", config);
@@ -481,81 +562,160 @@ function writeUciConfig(config) {
         uci.load('blue-merle').then(function() {
             console.log("UCI blue-merle package loaded successfully");
             
-            // Create the section if it doesn't exist
             if (!uci.get('blue-merle', 'imei')) {
                 console.log("Creating new imei section");
                 uci.add('blue-merle', 'imei', 'imei');
-            } else {
-                console.log("imei section already exists");
             }
             
-            // Set the values
-            console.log("Setting mode to:", config.imei_mode);
             uci.set('blue-merle', 'imei', 'mode', config.imei_mode);
             
             if (config.static_imei) {
-                console.log("Setting static_value to:", config.static_imei);
                 uci.set('blue-merle', 'imei', 'static_value', config.static_imei);
             } else {
-                console.log("Unsetting static_value");
                 uci.unset('blue-merle', 'imei', 'static_value');
             }
             
-            // Save and commit changes
-            console.log("Saving UCI changes...");
+            uci.set('blue-merle', 'imei', 'tac_mode', config.tac_mode);
+            
+            if (config.tac_category) {
+                uci.set('blue-merle', 'imei', 'tac_category', config.tac_category);
+            } else {
+                uci.unset('blue-merle', 'imei', 'tac_category');
+            }
+            
+            if (config.tac_value) {
+                uci.set('blue-merle', 'imei', 'tac_value', config.tac_value);
+            } else {
+                uci.unset('blue-merle', 'imei', 'tac_value');
+            }
+            
             return uci.save();
         }).then(function() {
-            console.log("UCI save successful, applying changes...");
             return uci.apply();
         }).then(function() {
             console.log("UCI apply successful");
             resolve();
         }).catch(function(err) {
             console.error("UCI operation failed:", err);
-            // Provide more specific error messages
-            var errorMsg = "Unknown UCI error";
-            if (err.toString().includes("Permission denied")) {
-                errorMsg = "Permission denied - check file permissions on /etc/config/blue-merle";
-            } else if (err.toString().includes("No such file")) {
-                errorMsg = "Config file missing - ensure /etc/config/blue-merle exists";
-            } else if (err.toString().includes("Invalid")) {
-                errorMsg = "Invalid UCI configuration";
-            }
-            reject(errorMsg + ": " + err.toString());
+            reject("UCI error: " + err.toString());
         });
     });
 }
 
-// Global variables for IMEI config
-var currentImeiMode = 'random';
-var currentStaticImei = '';
-
 function handleImeiModeChange(ev) {
     currentImeiMode = ev.target.value;
-    var staticInput = document.getElementById('static-imei-input');
-    var warningDiv = document.getElementById('static-imei-warning');
-    
-    if (staticInput) {
-        staticInput.style.display = currentImeiMode === 'static' ? 'block' : 'none';
-    }
-    if (warningDiv) {
-        warningDiv.style.display = currentImeiMode === 'static' ? 'block' : 'none';
-    }
+    updateImeiConfigVisibility();
+}
+
+function handleTacModeChange(ev) {
+    currentTacMode = ev.target.value;
+    updateTacConfigVisibility();
+}
+
+function handleTacCategoryChange(ev) {
+    currentTacCategory = ev.target.value;
+    updateTacValueOptions();
 }
 
 function handleStaticImeiChange(ev) {
     currentStaticImei = ev.target.value;
-    // Basic validation
-    var isValid = /^[0-9]{15}$/.test(currentStaticImei);
+    updateSaveButtonState();
+}
+
+function handleTacValueChange(ev) {
+    currentTacValue = ev.target.value;
+    updateSaveButtonState();
+}
+
+function updateImeiConfigVisibility() {
+    var staticInput = document.getElementById('static-imei-input');
+    var staticWarning = document.getElementById('static-imei-warning');
+    var tacGroup = document.getElementById('tac-config-group');
+    
+    if (staticInput) {
+        staticInput.style.display = currentImeiMode === 'static' ? 'block' : 'none';
+    }
+    if (staticWarning) {
+        staticWarning.style.display = currentImeiMode === 'static' ? 'block' : 'none';
+    }
+    if (tacGroup) {
+        tacGroup.style.display = currentImeiMode === 'static' ? 'none' : 'block';
+    }
+    
+    updateSaveButtonState();
+}
+
+function updateTacConfigVisibility() {
+    var categoryRow = document.getElementById('tac-category-row');
+    var valueRow = document.getElementById('tac-value-row');
+    
+    if (categoryRow) {
+        categoryRow.style.display = (currentTacMode === 'random_category' || currentTacMode === 'specific') ? 'flex' : 'none';
+    }
+    if (valueRow) {
+        valueRow.style.display = currentTacMode === 'specific' ? 'flex' : 'none';
+    }
+    
+    updateSaveButtonState();
+}
+
+function updateTacValueOptions() {
+    var tacValueSelect = document.getElementById('tac-value-select');
+    if (!tacValueSelect || !tacDatabase || !currentTacCategory) return;
+    
+    tacValueSelect.innerHTML = '';
+    tacValueSelect.appendChild(E('option', { 'value': '' }, _('Select TAC')));
+    
+    if (tacDatabase.categories && tacDatabase.categories[currentTacCategory]) {
+        var tacs = tacDatabase.categories[currentTacCategory].tacs;
+        tacs.forEach(function(tac) {
+            tacValueSelect.appendChild(E('option', { 'value': tac }, tac));
+        });
+    }
+}
+
+function updateSaveButtonState() {
     var saveButton = document.getElementById('save-config-button');
-    if (saveButton) {
-        saveButton.disabled = currentImeiMode === 'static' && !isValid;
+    if (!saveButton) return;
+    
+    var isValid = true;
+    
+    if (currentImeiMode === 'static') {
+        isValid = /^[0-9]{15}$/.test(currentStaticImei);
+    }
+    
+    if (currentImeiMode !== 'static') {
+        if (currentTacMode === 'random_category' && !currentTacCategory) {
+            isValid = false;
+        } else if (currentTacMode === 'specific' && (!currentTacCategory || !currentTacValue)) {
+            isValid = false;
+        }
+    }
+    
+    saveButton.disabled = !isValid || isReadonlyView;
+}
+
+function populateTacCategoryOptions() {
+    var tacCategorySelect = document.getElementById('tac-category-select');
+    if (!tacCategorySelect || !tacDatabase) return;
+    
+    tacCategorySelect.innerHTML = '';
+    tacCategorySelect.appendChild(E('option', { 'value': '' }, _('Select Category')));
+    
+    if (tacDatabase.categories) {
+        Object.keys(tacDatabase.categories).forEach(function(categoryKey) {
+            var category = tacDatabase.categories[categoryKey];
+            tacCategorySelect.appendChild(E('option', { 'value': categoryKey }, category.name));
+        });
     }
 }
 
 function handleSaveImeiConfig(ev) {
     var config = {
-        imei_mode: currentImeiMode
+        imei_mode: currentImeiMode,
+        tac_mode: currentTacMode,
+        tac_category: currentTacCategory,
+        tac_value: currentTacValue
     };
     
     if (currentImeiMode === 'static') {
@@ -566,22 +726,30 @@ function handleSaveImeiConfig(ev) {
         config.static_imei = currentStaticImei;
     }
     
+    if (currentImeiMode !== 'static') {
+        if (currentTacMode === 'random_category' && !currentTacCategory) {
+            ui.addNotification(null, E('p', _('Error: Please select a category for random category mode')));
+            return;
+        } else if (currentTacMode === 'specific' && (!currentTacCategory || !currentTacValue)) {
+            ui.addNotification(null, E('p', _('Error: Please select both category and TAC for specific mode')));
+            return;
+        }
+    }
+    
     writeUciConfig(config).then(function() {
-        ui.addNotification(null, E('p', _('IMEI configuration saved successfully!')));
+        ui.addNotification(null, E('p', _('IMEI and TAC configuration saved successfully!')));
     }).catch(function(err) {
         console.log("Error saving UCI config:", err);
-        ui.addNotification(null, E('p', _('Error saving IMEI configuration: ') + err));
+        ui.addNotification(null, E('p', _('Error saving configuration: ') + err));
     });
 }
 
 return view.extend({
     load: function() {
-        return Promise.resolve();
+        return loadTacDatabase();
     },
 
     render: function(listData) {
-        var query = decodeURIComponent(L.toArray(location.search.match(/\bquery=([^=]+)\b/))[1] || '');
-
         var view = E([], [
             E('style', { 'type': 'text/css' }, [ css ]),
 
@@ -629,7 +797,7 @@ return view.extend({
                         'disabled': isReadonlyView 
                     }, [ _('Initiate SIM Swap Process') ]),
                     E('div', { 'class': 'bm-info-text' }, 
-                        _('Safely prepare device for SIM card replacement with new identity, will generate a random IMEI')
+                        _('Safely prepare device for SIM card replacement with new identity')
                     )
                 ])
             ]),
@@ -666,6 +834,47 @@ return view.extend({
                 E('div', { 'id': 'static-imei-warning', 'class': 'bm-warning', 'style': 'display: none;' },
                     _('Warning: Using the same static IMEI repeatedly may compromise your privacy and security.')
                 ),
+                
+                // TAC Configuration Group
+                E('div', { 'id': 'tac-config-group', 'class': 'bm-tac-group' }, [
+                    E('h4', {}, _('TAC (Type Allocation Code) Selection')),
+                    
+                    E('div', { 'class': 'bm-tac-row' }, [
+                        E('label', {}, _('TAC Mode:')),
+                        E('select', { 
+                            'id': 'tac-mode-select',
+                            'change': handleTacModeChange
+                        }, [
+                            E('option', { 'value': 'random_any' }, _('Random TAC from any manufacturer')),
+                            E('option', { 'value': 'random_category' }, _('Random TAC from specific manufacturer')),
+                            E('option', { 'value': 'specific' }, _('Specific TAC from specific manufacturer'))
+                        ])
+                    ]),
+                    
+                    E('div', { 'id': 'tac-category-row', 'class': 'bm-tac-row', 'style': 'display: none;' }, [
+                        E('label', {}, _('Manufacturer:')),
+                        E('select', { 
+                            'id': 'tac-category-select',
+                            'change': handleTacCategoryChange
+                        }, [
+                            E('option', { 'value': '' }, _('Select Manufacturer'))
+                        ])
+                    ]),
+                    
+                    E('div', { 'id': 'tac-value-row', 'class': 'bm-tac-row', 'style': 'display: none;' }, [
+                        E('label', {}, _('Specific TAC:')),
+                        E('select', { 
+                            'id': 'tac-value-select',
+                            'change': handleTacValueChange
+                        }, [
+                            E('option', { 'value': '' }, _('Select TAC'))
+                        ])
+                    ]),
+                    
+                    E('div', { 'class': 'bm-info-text' }, 
+                        _('TAC determines which smartphone model your device appears as to cellular networks')
+                    )
+                ]),
                 
                 E('div', { 'class': 'bm-button-group' }, [
                     E('button', { 
@@ -729,23 +938,41 @@ return view.extend({
                 }
             });
 
+            // Populate TAC categories
+            populateTacCategoryOptions();
+
             // Load saved UCI config
             readUciConfig().then(function(config) {
                 currentImeiMode = config.imei_mode || 'random';
                 currentStaticImei = config.static_imei || '';
+                currentTacMode = config.tac_mode || 'random_any';
+                currentTacCategory = config.tac_category || '';
+                currentTacValue = config.tac_value || '';
                 
-                var select = document.getElementById('imei-mode-select');
-                if (select) select.value = currentImeiMode;
+                var imeiModeSelect = document.getElementById('imei-mode-select');
+                if (imeiModeSelect) imeiModeSelect.value = currentImeiMode;
+                
+                var tacModeSelect = document.getElementById('tac-mode-select');
+                if (tacModeSelect) tacModeSelect.value = currentTacMode;
+                
+                var tacCategorySelect = document.getElementById('tac-category-select');
+                if (tacCategorySelect) tacCategorySelect.value = currentTacCategory;
                 
                 var staticInput = document.getElementById('static-imei-input');
-                var warningDiv = document.getElementById('static-imei-warning');
-                if (staticInput) {
-                    staticInput.value = currentStaticImei;
-                    staticInput.style.display = currentImeiMode === 'static' ? 'block' : 'none';
-                }
-                if (warningDiv) {
-                    warningDiv.style.display = currentImeiMode === 'static' ? 'block' : 'none';
-                }
+                if (staticInput) staticInput.value = currentStaticImei;
+                
+                updateImeiConfigVisibility();
+                updateTacConfigVisibility();
+                updateTacValueOptions();
+                
+                // Set TAC value after options are populated
+                setTimeout(function() {
+                    var tacValueSelect = document.getElementById('tac-value-select');
+                    if (tacValueSelect && currentTacValue) {
+                        tacValueSelect.value = currentTacValue;
+                    }
+                }, 100);
+                
             }).catch(function(err) {
                 console.log("Could not load UCI config:", err);
             });

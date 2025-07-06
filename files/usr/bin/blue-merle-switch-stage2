@@ -41,15 +41,21 @@ fi
 
 rm -f /tmp/old_imsi
 
-# Read IMEI mode config from UCI config /etc/config/blue-merle
+# Read IMEI and TAC configuration from UCI config /etc/config/blue-merle
 IMEI_MODE="random"
 STATIC_IMEI=""
+TAC_MODE="random_any"
+TAC_CATEGORY=""
+TAC_VALUE=""
 
 # First, try to load the UCI config properly
 if [ -f /etc/config/blue-merle ]; then
     # Use UCI commands to read the configuration
     IMEI_MODE=$(uci -q get blue-merle.imei.mode 2>/dev/null || echo "random")
     STATIC_IMEI=$(uci -q get blue-merle.imei.static_value 2>/dev/null || echo "")
+    TAC_MODE=$(uci -q get blue-merle.imei.tac_mode 2>/dev/null || echo "random_any")
+    TAC_CATEGORY=$(uci -q get blue-merle.imei.tac_category 2>/dev/null || echo "")
+    TAC_VALUE=$(uci -q get blue-merle.imei.tac_value 2>/dev/null || echo "")
     
     # Fallback to manual parsing if UCI fails
     if [ -z "$IMEI_MODE" ] || [ "$IMEI_MODE" = "random" ]; then
@@ -60,11 +66,20 @@ if [ -f /etc/config/blue-merle ]; then
         if grep -q "option static_value" /etc/config/blue-merle; then
             STATIC_IMEI=$(awk '/option static_value/ {gsub(/['"'"']/, "", $3); print $3}' /etc/config/blue-merle)
         fi
+        if grep -q "option tac_mode" /etc/config/blue-merle; then
+            TAC_MODE=$(awk '/option tac_mode/ {gsub(/['"'"']/, "", $3); print $3}' /etc/config/blue-merle)
+        fi
+        if grep -q "option tac_category" /etc/config/blue-merle; then
+            TAC_CATEGORY=$(awk '/option tac_category/ {gsub(/['"'"']/, "", $3); print $3}' /etc/config/blue-merle)
+        fi
+        if grep -q "option tac_value" /etc/config/blue-merle; then
+            TAC_VALUE=$(awk '/option tac_value/ {gsub(/['"'"']/, "", $3); print $3}' /etc/config/blue-merle)
+        fi
     fi
     
     # Debug output
-    logger -p notice -t blue-merle-stage2 "Config file exists, IMEI_MODE='$IMEI_MODE', STATIC_IMEI='$STATIC_IMEI'"
-    mcu_send_message "Config: Mode=$IMEI_MODE"
+    logger -p notice -t blue-merle-stage2 "Config file exists, IMEI_MODE='$IMEI_MODE', TAC_MODE='$TAC_MODE', TAC_CATEGORY='$TAC_CATEGORY', TAC_VALUE='$TAC_VALUE'"
+    mcu_send_message "Config: Mode=$IMEI_MODE TAC=$TAC_MODE"
     sleep 3
 else
     logger -p notice -t blue-merle-stage2 "Config file /etc/config/blue-merle not found, using defaults"
@@ -83,6 +98,17 @@ case "$IMEI_MODE" in
         ;;
 esac
 
+# Ensure we have a valid TAC mode
+case "$TAC_MODE" in
+    "random_any"|"random_category"|"specific")
+        # Valid TAC modes, keep as is
+        ;;
+    *)
+        logger -p warn -t blue-merle-stage2 "Invalid TAC mode '$TAC_MODE', defaulting to random_any"
+        TAC_MODE="random_any"
+        ;;
+esac
+
 # Validate static IMEI if in static mode
 if [ "$IMEI_MODE" = "static" ]; then
     if [ -z "$STATIC_IMEI" ] || [ ${#STATIC_IMEI} -ne 15 ] || ! echo "$STATIC_IMEI" | grep -q '^[0-9]*$'; then
@@ -90,6 +116,24 @@ if [ "$IMEI_MODE" = "static" ]; then
         mcu_send_message "Invalid static   IMEI, using random"
         sleep 3
         IMEI_MODE="random"
+    fi
+fi
+
+# Build python command arguments based on configuration
+PYTHON_ARGS=""
+TAC_ARGS=""
+
+# Add TAC arguments based on mode (only for non-static IMEI modes)
+if [ "$IMEI_MODE" != "static" ]; then
+    TAC_ARGS="--tac-mode $TAC_MODE"
+    
+    if [ "$TAC_MODE" = "random_category" ] && [ -n "$TAC_CATEGORY" ]; then
+        TAC_ARGS="$TAC_ARGS --tac-category $TAC_CATEGORY"
+    elif [ "$TAC_MODE" = "specific" ] && [ -n "$TAC_VALUE" ]; then
+        TAC_ARGS="$TAC_ARGS --tac-value $TAC_VALUE"
+        if [ -n "$TAC_CATEGORY" ]; then
+            TAC_ARGS="$TAC_ARGS --tac-category $TAC_CATEGORY"
+        fi
     fi
 fi
 
@@ -102,16 +146,16 @@ case "$IMEI_MODE" in
         timeout 15 python3 /lib/blue-merle/imei_generate.py -s "$STATIC_IMEI"
         ;;
     "deterministic")
-        mcu_send_message "Setting deterministic   IMEI from IMSI"
+        mcu_send_message "Setting deterministic   IMEI with TAC: $TAC_MODE"
         sleep 2
-        logger -p notice -t blue-merle-stage2 "Setting deterministic IMEI"
-        timeout 15 python3 /lib/blue-merle/imei_generate.py -d
+        logger -p notice -t blue-merle-stage2 "Setting deterministic IMEI with TAC args: $TAC_ARGS"
+        timeout 15 python3 /lib/blue-merle/imei_generate.py -d $TAC_ARGS
         ;;
     *)
-        mcu_send_message "Setting random      IMEI"
+        mcu_send_message "Setting random      IMEI with TAC: $TAC_MODE"
         sleep 2
-        logger -p notice -t blue-merle-stage2 "Setting random IMEI"
-        timeout 15 python3 /lib/blue-merle/imei_generate.py -r
+        logger -p notice -t blue-merle-stage2 "Setting random IMEI with TAC args: $TAC_ARGS"
+        timeout 15 python3 /lib/blue-merle/imei_generate.py -r $TAC_ARGS
         ;;
 esac
 

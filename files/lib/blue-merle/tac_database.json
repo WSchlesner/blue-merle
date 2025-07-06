@@ -1,0 +1,144 @@
+{
+  "modem_info": {
+    "model": "Quectel EM060K-G",
+    "category": "LTE-A Cat 6",
+    "supported_bands": {
+      "lte_fdd": ["B1", "B2", "B3", "B4", "B5", "B7", "B8", "B12", "B13", "B14", "B17", "B18", "B19", "B20", "B25", "B26", "B28", "B29", "B30", "B32", "B66", "B71"],
+      "lte_tdd": ["B34", "B38", "B39", "B40", "B41", "B42", "B43", "B46", "B48"],
+      "wcdma": ["B1", "B2", "B3", "B4", "B5", "B6", "B8", "B19"]
+    }
+  },
+  "categories": {
+    "apple": {
+      "name": "Apple iPhone",
+      "description": "iPhones with global band support compatible with EM060K-G",
+      "tacs": [
+        "35674108",
+        "35290611", 
+        "35397710",
+        "35323210",
+        "35384110",
+        "35982748",
+        "35672011",
+        "35759049",
+        "35404806",
+        "35318409",
+        "35297510"
+      ],
+      "compatible_lte_fdd_bands": ["B1", "B2", "B3", "B4", "B5", "B7", "B8", "B12", "B13", "B14", "B17", "B18", "B19", "B20", "B25", "B26", "B28", "B30", "B66", "B71"],
+      "compatible_lte_tdd_bands": ["B34", "B38", "B39", "B40", "B41", "B42", "B43", "B46", "B48"],
+      "compatible_wcdma_bands": ["B1", "B2", "B3", "B4", "B5", "B8", "B19"],
+      "models": ["iPhone 12/13/14/15 series", "iPhone SE 3rd gen", "iPhone 11 Pro"]
+    },
+    "samsung": {
+      "name": "Samsung Galaxy",
+      "description": "Samsung smartphones with extensive global band coverage",
+      "tacs": [
+        "35266891",
+        "35407115",
+        "35538025",
+        "35480910",
+        "35324590",
+        "35901183",
+        "35139729",
+        "35479164",
+        "35728510",
+        "35401607"
+      ],
+      "compatible_lte_fdd_bands": ["B1", "B2", "B3", "B4", "B5", "B7", "B8", "B12", "B13", "B17", "B18", "B19", "B20", "B25", "B26", "B28", "B66", "B71"],
+      "compatible_lte_tdd_bands": ["B34", "B38", "B39", "B40", "B41", "B42", "B43"],
+      "compatible_wcdma_bands": ["B1", "B2", "B3", "B4", "B5", "B8", "B19"],
+      "models": ["Galaxy S21/S22/S23/S24 series", "Galaxy Note 20", "Galaxy A53/A54"]
+    },
+    "google": {
+      "name": "Google Pixel",
+      "description": "Google Pixel phones with comprehensive band support",
+      "tacs": [
+        "35350910",
+        "35177910",
+        "35891610",
+        "35405810",
+        "35728110"
+      ],
+      "compatible_lte_fdd_bands": ["B1", "B2", "B3", "B4", "B5", "B7", "B8", "B12", "B13", "B14", "B17", "B18", "B19", "B20", "B25", "B26", "B28", "B30", "B66", "B71"],
+      "compatible_lte_tdd_bands": ["B38", "B39", "B40", "B41", "B42", "B43", "B48"],
+      "compatible_wcdma_bands": ["B1", "B2", "B3", "B4", "B5", "B8", "B19"],
+      "models": ["Pixel 6/7/8 series", "Pixel 5a", "Pixel 4a 5G"]
+    },
+    "oneplus": {
+      "name": "OnePlus",
+      "description": "OnePlus smartphones with global connectivity",
+      "tacs": [
+        "86356203",
+        "86718803",
+        "86902603",
+        "86357403",
+        "86240503"
+      ],
+      "compatible_lte_fdd_bands": ["B1", "B2", "B3", "B4", "B5", "B7", "B8", "B12", "B13", "B17", "B18", "B19", "B20", "B25", "B26", "B28", "B66"],
+      "compatible_lte_tdd_bands": ["B34", "B38", "B39", "B40", "B41", "B42"],
+      "compatible_wcdma_bands": ["B1", "B2", "B3", "B4", "B5", "B8", "B19"],
+      "models": ["OnePlus 9/10/11 series", "OnePlus Nord series", "OnePlus 8T"]
+    },
+    "xiaomi": {
+      "name": "Xiaomi",
+      "description": "Xiaomi global variants with extensive band support",
+      "tacs": [
+        "86240803",
+        "86917903",
+        "86025403",
+        "86356703",
+        "86902203"
+      ],
+      "compatible_lte_fdd_bands": ["B1", "B2", "B3", "B4", "B5", "B7", "B8", "B12", "B13", "B17", "B18", "B19", "B20", "B26", "B28", "B66"],
+      "compatible_lte_tdd_bands": ["B34", "B38", "B39", "B40", "B41", "B42"],
+      "compatible_wcdma_bands": ["B1", "B2", "B3", "B4", "B5", "B8", "B19"],
+      "models": ["Mi 11/12/13 series", "Redmi Note 11/12 Global", "Poco F4/F5"]
+    },
+    "motorola": {
+      "name": "Motorola",
+      "description": "Motorola smartphones with US/Global band compatibility",
+      "tacs": [
+        "35925608",
+        "35847609",
+        "35730610",
+        "35619411",
+        "35502112"
+      ],
+      "compatible_lte_fdd_bands": ["B1", "B2", "B3", "B4", "B5", "B7", "B8", "B12", "B13", "B14", "B17", "B18", "B19", "B20", "B25", "B26", "B28", "B66", "B71"],
+      "compatible_lte_tdd_bands": ["B38", "B39", "B40", "B41", "B42", "B43"],
+      "compatible_wcdma_bands": ["B1", "B2", "B3", "B4", "B5", "B8", "B19"],
+      "models": ["Moto G Power/Stylus", "Edge 30/40 series", "ThinkPhone"]
+    },
+    "sony": {
+      "name": "Sony Xperia",
+      "description": "Sony Xperia phones with global band coverage",
+      "tacs": [
+        "35405008",
+        "35326709",
+        "35248010",
+        "35169311",
+        "35090612"
+      ],
+      "compatible_lte_fdd_bands": ["B1", "B2", "B3", "B4", "B5", "B7", "B8", "B12", "B13", "B17", "B18", "B19", "B20", "B25", "B26", "B28", "B66"],
+      "compatible_lte_tdd_bands": ["B38", "B39", "B40", "B41", "B42"],
+      "compatible_wcdma_bands": ["B1", "B2", "B3", "B4", "B5", "B8", "B19"],
+      "models": ["Xperia 1/5 series", "Xperia 10 IV/V", "Xperia Pro-I"]
+    },
+    "lg": {
+      "name": "LG",
+      "description": "LG smartphones with comprehensive US/Global bands",
+      "tacs": [
+        "35824507",
+        "35745608",
+        "35666709",
+        "35587810",
+        "35508911"
+      ],
+      "compatible_lte_fdd_bands": ["B1", "B2", "B3", "B4", "B5", "B7", "B8", "B12", "B13", "B14", "B17", "B18", "B19", "B20", "B25", "B26", "B28", "B66", "B71"],
+      "compatible_lte_tdd_bands": ["B38", "B39", "B40", "B41", "B42"],
+      "compatible_wcdma_bands": ["B1", "B2", "B3", "B4", "B5", "B8", "B19"],
+      "models": ["V60/V70 ThinQ", "Wing 5G", "Velvet 5G"]
+    }
+  }
+}

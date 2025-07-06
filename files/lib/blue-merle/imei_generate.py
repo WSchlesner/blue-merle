@@ -4,6 +4,8 @@ import string
 import argparse
 import serial
 import re
+import json
+import os
 from functools import reduce
 from enum import Enum
 
@@ -26,12 +28,20 @@ modes.add_argument("-s", "--static", help="Sets user-defined IMEI",
 modes.add_argument("-r", "--random", help="Sets random IMEI",
                    action="store_true")
 
+# TAC selection arguments
+ap.add_argument("--tac-mode", help="TAC selection mode: random_any, random_category, specific", 
+                choices=['random_any', 'random_category', 'specific'], default='random_any')
+ap.add_argument("--tac-category", help="TAC category for random_category or specific mode")
+ap.add_argument("--tac-value", help="Specific TAC value for specific mode")
+
 # Example IMEI: 490154203237518
 imei_length = 14  # without validation digit
-imei_prefix = ["35674108", "35290611", "35397710", "35323210", "35384110",
-               "35982748", "35672011", "35759049", "35266891", "35407115",
-               "35538025", "35480910", "35324590", "35901183", "35139729",
-               "35479164"]
+
+# Default TACs (fallback if database is not available)
+default_imei_prefix = ["35674108", "35290611", "35397710", "35323210", "35384110",
+                      "35982748", "35672011", "35759049", "35266891", "35407115",
+                      "35538025", "35480910", "35324590", "35901183", "35139729",
+                      "35479164"]
 
 verbose = False
 mode = None
@@ -40,6 +50,70 @@ mode = None
 TTY = '/dev/ttyUSB3'
 BAUDRATE = 9600
 TIMEOUT = 3
+
+
+def load_tac_database():
+    """Load TAC database from JSON file"""
+    tac_db_path = '/lib/blue-merle/tac_database.json'
+    try:
+        if os.path.exists(tac_db_path):
+            with open(tac_db_path, 'r') as f:
+                return json.load(f)
+        else:
+            if verbose:
+                print(f"TAC database not found at {tac_db_path}, using defaults")
+            return None
+    except Exception as e:
+        if verbose:
+            print(f"Error loading TAC database: {e}, using defaults")
+        return None
+
+
+def get_tac_prefix(tac_mode='random_any', tac_category=None, tac_value=None):
+    """Get TAC prefix based on selection mode"""
+    tac_db = load_tac_database()
+    
+    if not tac_db:
+        # Fallback to default TACs
+        if verbose:
+            print("Using default TAC list")
+        return random.choice(default_imei_prefix)
+    
+    if tac_mode == 'specific' and tac_value:
+        # Validate that the specific TAC exists in database
+        for category_data in tac_db['categories'].values():
+            if tac_value in category_data['tacs']:
+                if verbose:
+                    print(f"Using specific TAC: {tac_value}")
+                return tac_value
+        
+        # If specific TAC not found, fall back to random
+        if verbose:
+            print(f"Specific TAC {tac_value} not found, falling back to random")
+        tac_mode = 'random_any'
+    
+    if tac_mode == 'random_category' and tac_category:
+        # Get random TAC from specific category
+        if tac_category in tac_db['categories']:
+            tacs = tac_db['categories'][tac_category]['tacs']
+            selected_tac = random.choice(tacs)
+            if verbose:
+                print(f"Using random TAC from {tac_category}: {selected_tac}")
+            return selected_tac
+        else:
+            if verbose:
+                print(f"Category {tac_category} not found, falling back to random any")
+            tac_mode = 'random_any'
+    
+    # Default: random from any category
+    all_tacs = []
+    for category_data in tac_db['categories'].values():
+        all_tacs.extend(category_data['tacs'])
+    
+    selected_tac = random.choice(all_tacs)
+    if verbose:
+        print(f"Using random TAC from any category: {selected_tac}")
+    return selected_tac
 
 
 def get_imsi():
@@ -100,17 +174,23 @@ def get_imei():
     return b"".join(imei_d)
 
 
-def generate_imei(imei_prefix, imsi_d):
+def generate_imei(imei_prefix, imsi_d, tac_mode='random_any', tac_category=None, tac_value=None):
     # In deterministic mode we seed the RNG with the IMSI.
     # As a consequence we will always generate the same IMEI for a given IMSI
     if (mode == Modes.DETERMINISTIC):
         random.seed(imsi_d)
 
-    # We choose a random prefix from the predefined list.
-    # Then we fill the rest with random characters
-    imei = random.choice(imei_prefix)
+    # Get TAC prefix based on selection mode
+    if isinstance(imei_prefix, list):
+        # Legacy mode - use provided list
+        imei = random.choice(imei_prefix)
+    else:
+        # New TAC selection mode
+        imei = get_tac_prefix(tac_mode, tac_category, tac_value)
+    
     if (verbose):
-        print(f"IMEI prefix: {imei}")
+        print(f"IMEI prefix (TAC): {imei}")
+    
     random_part_length = imei_length - len(imei)
     if (verbose):
         print(f"Length of the random IMEI part: {random_part_length}")
@@ -147,8 +227,8 @@ def generate_imei(imei_prefix, imsi_d):
 
 def validate_imei(imei):
     # before anything check if length is 14 characters
-    if len(imei) != 14:
-        print(f"NOT A VALID IMEI: {imei} - IMEI must be 14 characters in length")
+    if len(imei) != 15:
+        print(f"NOT A VALID IMEI: {imei} - IMEI must be 15 characters in length")
         return False
     # cut off last digit
     validation_digit = int(imei[-1])
@@ -199,7 +279,7 @@ if __name__ == '__main__':
         else:
             exit(-1)
     else:
-        imei = generate_imei(imei_prefix, imsi_d)
+        imei = generate_imei(default_imei_prefix, imsi_d, args.tac_mode, args.tac_category, args.tac_value)
         if (verbose):
             print(f"Generated new IMEI: {imei}")
         if not args.generate_only:

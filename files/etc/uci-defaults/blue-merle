@@ -16,6 +16,17 @@ uci -q get blue-merle.imei > /dev/null || {
     uci set blue-merle.imei=imei
     uci set blue-merle.imei.mode=random
     uci set blue-merle.imei.static_value=
+    uci set blue-merle.imei.tac_mode=random_any
+    uci set blue-merle.imei.tac_category=
+    uci set blue-merle.imei.tac_value=
+    uci commit blue-merle
+}
+
+# Check if TAC configuration exists, if not add it to existing config
+uci -q get blue-merle.imei.tac_mode > /dev/null || {
+    uci set blue-merle.imei.tac_mode=random_any
+    uci set blue-merle.imei.tac_category=
+    uci set blue-merle.imei.tac_value=
     uci commit blue-merle
 }
 
