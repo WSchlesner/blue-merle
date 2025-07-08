@@ -118,6 +118,13 @@ def get_imei():
     return b"".join(imei_d)
 
 
+def calculate_check_digit(base_imei):
+    """Calculate Luhn check digit for 14-digit base IMEI"""
+    iteration_1 = "".join([c if i % 2 == 0 else str(2*int(c)) for i, c in enumerate(base_imei)])
+    sum_digits = reduce((lambda a, b: int(a) + int(b)), iteration_1)
+    return (10 - int(str(sum_digits)[-1])) % 10
+
+
 def generate_imei(imei_prefix, imsi_d):
     # In deterministic mode we seed the RNG with the IMSI.
     # As a consequence we will always generate the same IMEI for a given IMSI
@@ -137,22 +144,7 @@ def generate_imei(imei_prefix, imsi_d):
         print(f"IMEI without validation digit: {imei}")
 
     # calculate validation digit
-    # Double each second digit in the IMEI: 4 18 0 2 5 8 2 0 3 4 3 14 5 2
-    # (excluding the validation digit)
-
-    iteration_1 = "".join([c if i % 2 == 0 else str(2*int(c)) for i, c in enumerate(imei)])
-
-    # Separate this number into single digits: 4 1 8 0 2 5 8 2 0 3 4 3 1 4 5 2
-    # (notice that 18 and 14 have been split).
-    # Add up all the numbers: 4+1+8+0+2+5+8+2+0+3+4+3+1+4+5+2 = 52
-
-    sum_digits = reduce((lambda a, b: int(a) + int(b)), iteration_1)
-
-    # Take your resulting number, remember it, and round it up to the nearest
-    # multiple of ten: 60.
-    # Subtract your original number from the rounded-up number: 60 - 52 = 8.
-
-    validation_digit = (10 - int(str(sum_digits)[-1])) % 10
+    validation_digit = calculate_check_digit(imei)
     if (verbose):
         print(f"Validation digit: {validation_digit}")
 
@@ -163,50 +155,40 @@ def generate_imei(imei_prefix, imsi_d):
     return imei
 
 
-def validate_imei(imei):
+def validate_and_correct_imei(imei):
+    """Validate 15-digit IMEI and auto-correct check digit if needed"""
     # Check if length is 15 characters (14 digits + 1 check digit)
     if len(imei) != 15:
         print(f"NOT A VALID IMEI: {imei} - IMEI must be exactly 15 digits")
-        return False
+        return None
     
     # Check if all characters are digits
     if not imei.isdigit():
         print(f"NOT A VALID IMEI: {imei} - IMEI must contain only digits")
-        return False
+        return None
     
-    # Extract the check digit (last digit)
-    validation_digit = int(imei[-1])
-    # Extract the first 14 digits for verification
-    imei_verify = imei[0:14]
+    # Extract base IMEI and check digit
+    base_imei = imei[:14]
+    input_check_digit = int(imei[14])
+    correct_check_digit = calculate_check_digit(base_imei)
     
-    if (verbose):
-        print(f"Validating IMEI: {imei}")
-        print(f"Check digit: {validation_digit}")
-        print(f"Base digits: {imei_verify}")
-
-    # Double each second digit in the IMEI (starting from position 0)
-    iteration_1 = "".join([c if i % 2 == 0 else str(2*int(c)) for i, c in enumerate(imei_verify)])
-
-    # Separate this number into single digits and add them up
-    sum_digits = reduce((lambda a, b: int(a) + int(b)), iteration_1)
-    
-    if (verbose):
-        print(f"Doubled sequence: {iteration_1}")
-        print(f"Sum: {sum_digits}")
-
-    # Calculate expected check digit using Luhn algorithm
-    validation_digit_verify = (10 - int(str(sum_digits)[-1])) % 10
-    
-    if (verbose):
-        print(f"Expected check digit: {validation_digit_verify}")
-
-    if validation_digit == validation_digit_verify:
-        print(f"{imei} is VALID")
-        return True
-
-    print(f"NOT A VALID IMEI: {imei} - Check digit validation failed")
-    print(f"Expected check digit: {validation_digit_verify}, got: {validation_digit}")
-    return False
+    if input_check_digit == correct_check_digit:
+        # IMEI is correct
+        if (verbose):
+            print(f"IMEI {imei} is VALID")
+        return imei
+    else:
+        # Auto-correct the check digit
+        corrected_imei = base_imei + str(correct_check_digit)
+        if (verbose):
+            print(f"CHECK DIGIT CORRECTED:")
+            print(f"  Input:   {imei} (check digit: {input_check_digit})")
+            print(f"  Correct: {corrected_imei} (check digit: {correct_check_digit})")
+            print(f"  Using corrected IMEI")
+        else:
+            print(f"IMEI check digit corrected from {input_check_digit} to {correct_check_digit}")
+        
+        return corrected_imei
 
 
 if __name__ == '__main__':
@@ -224,7 +206,7 @@ if __name__ == '__main__':
         static_imei = args.static
 
     if mode == Modes.STATIC:
-        # Handle both 14-digit and 15-digit IMEIs
+        # Handle both 14-digit and 15-digit IMEIs with smart correction
         if len(static_imei) == 14:
             # 14-digit IMEI - basic format validation only
             if not static_imei.isdigit():
@@ -234,9 +216,7 @@ if __name__ == '__main__':
             if (verbose):
                 print(f"Using 14-digit IMEI: {static_imei}")
                 # Show what the complete IMEI would be (informational only)
-                iteration_1 = "".join([c if i % 2 == 0 else str(2*int(c)) for i, c in enumerate(static_imei)])
-                sum_digits = reduce((lambda a, b: int(a) + int(b)), iteration_1)
-                calculated_check_digit = (10 - int(str(sum_digits)[-1])) % 10
+                calculated_check_digit = calculate_check_digit(static_imei)
                 print(f"Complete IMEI would be: {static_imei}{calculated_check_digit}")
             
             if not args.generate_only:
@@ -244,13 +224,14 @@ if __name__ == '__main__':
                     exit(-1)
                     
         elif len(static_imei) == 15:
-            # 15-digit IMEI - full Luhn validation
-            if validate_imei(static_imei):
-                if not args.generate_only:
-                    if not set_imei(static_imei):
-                        exit(-1)
-            else:
+            # 15-digit IMEI - validate and auto-correct if needed
+            corrected_imei = validate_and_correct_imei(static_imei)
+            if corrected_imei is None:
                 exit(-1)
+            
+            if not args.generate_only:
+                if not set_imei(corrected_imei):
+                    exit(-1)
         else:
             print(f"NOT A VALID IMEI: {static_imei} - IMEI must be 14 or 15 digits")
             exit(-1)

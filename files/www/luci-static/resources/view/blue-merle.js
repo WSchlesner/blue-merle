@@ -90,6 +90,21 @@ var css = '                             \
         box-shadow: 0 0 3px rgba(0,153,204,0.3); \
     }                                   \
                                         \
+    .bm-form-group input.error {        \
+        border-color: #dc3545;          \
+        box-shadow: 0 0 3px rgba(220,53,69,0.3); \
+    }                                   \
+                                        \
+    .bm-form-group input.warning {      \
+        border-color: #ffc107;          \
+        box-shadow: 0 0 3px rgba(255,193,7,0.3); \
+    }                                   \
+                                        \
+    .bm-form-group input.success {      \
+        border-color: #28a745;          \
+        box-shadow: 0 0 3px rgba(40,167,69,0.3); \
+    }                                   \
+                                        \
     .bm-button-group {                  \
         margin: 1em 0;                  \
         padding: 1em 0;                 \
@@ -159,6 +174,33 @@ var css = '                             \
         font-weight: bold;              \
     }                                   \
                                         \
+    .bm-imei-validation {               \
+        margin: 0.5em 0;                \
+        padding: 0.5em;                 \
+        border-radius: 3px;             \
+        font-size: 0.9em;               \
+        display: none;                  \
+    }                                   \
+                                        \
+    .bm-imei-validation.error {         \
+        background: #f8d7da;            \
+        border: 1px solid #f5c6cb;      \
+        color: #721c24;                 \
+    }                                   \
+                                        \
+    .bm-imei-validation.warning {       \
+        background: #fff3cd;            \
+        border: 1px solid #ffeaa7;      \
+        color: #856404;                 \
+    }                                   \
+                                        \
+    .bm-imei-validation strong {        \
+        font-family: monospace;         \
+        background: rgba(255,255,255,0.5); \
+        padding: 0.2em 0.4em;           \
+        border-radius: 2px;             \
+    }                                   \
+                                        \
     #static-imei-input {                \
         width: 15em;                    \
         font-family: monospace;         \
@@ -198,6 +240,98 @@ var packages = {
 var languages = ['en'];
 
 var currentDisplayMode = 'available', currentDisplayRows = [];
+
+// IMEI validation functions
+function calculateLuhnCheckDigit(baseImei) {
+    let doubled = '';
+    for (let i = 0; i < baseImei.length; i++) {
+        if (i % 2 === 0) {
+            doubled += baseImei[i];
+        } else {
+            doubled += (parseInt(baseImei[i]) * 2).toString();
+        }
+    }
+    
+    let sum = 0;
+    for (let digit of doubled) {
+        sum += parseInt(digit);
+    }
+    
+    return (10 - (sum % 10)) % 10;
+}
+
+function validateImei(imei) {
+    if (!imei || imei.length !== 15) {
+        return { valid: false, error: "IMEI must be exactly 15 digits" };
+    }
+    
+    if (!/^\d{15}$/.test(imei)) {
+        return { valid: false, error: "IMEI must contain only digits" };
+    }
+    
+    const baseImei = imei.substring(0, 14);
+    const inputCheckDigit = parseInt(imei.charAt(14));
+    const correctCheckDigit = calculateLuhnCheckDigit(baseImei);
+    
+    if (inputCheckDigit === correctCheckDigit) {
+        return { valid: true };
+    } else {
+        const correctedImei = baseImei + correctCheckDigit;
+        return { 
+            valid: false, 
+            correctable: true,
+            inputCheckDigit: inputCheckDigit,
+            correctCheckDigit: correctCheckDigit,
+            correctedImei: correctedImei,
+            error: `Check digit should be ${correctCheckDigit}, not ${inputCheckDigit}. Correct IMEI: ${correctedImei}`
+        };
+    }
+}
+
+function showImeiValidation(input, validationResult) {
+    const validationDiv = document.getElementById('imei-validation');
+    
+    if (validationResult.valid) {
+        input.className = input.className.replace(/\b(error|warning|success)\b/g, '') + ' success';
+        if (validationDiv) validationDiv.style.display = 'none';
+    } else if (validationResult.correctable) {
+        input.className = input.className.replace(/\b(error|warning|success)\b/g, '') + ' warning';
+        showImeiMessage(validationResult.error, 'warning');
+    } else {
+        input.className = input.className.replace(/\b(error|warning|success)\b/g, '') + ' error';
+        showImeiMessage(validationResult.error, 'error');
+    }
+}
+
+function showImeiMessage(message, type) {
+    let validationDiv = document.getElementById('imei-validation');
+    
+    if (!validationDiv) {
+        validationDiv = document.createElement('div');
+        validationDiv.id = 'imei-validation';
+        validationDiv.className = 'bm-imei-validation';
+        
+        const staticInput = document.getElementById('static-imei-input');
+        staticInput.parentNode.insertBefore(validationDiv, staticInput.nextSibling);
+    }
+    
+    validationDiv.className = 'bm-imei-validation ' + type;
+    validationDiv.innerHTML = message;
+    validationDiv.style.display = 'block';
+}
+
+function hideImeiValidation() {
+    const validationDiv = document.getElementById('imei-validation');
+    if (validationDiv) validationDiv.style.display = 'none';
+}
+
+function updateSaveButtonState() {
+    const saveButton = document.getElementById('save-config-button');
+    if (!saveButton) return;
+    
+    // Save button is always enabled - auto-correction happens on save
+    saveButton.disabled = isReadonlyView;
+}
 
 function handleReset(ev) {
 }
@@ -516,8 +650,6 @@ function writeUciConfig(config) {
             var errorMsg = "Unknown UCI error";
             if (err.toString().includes("Permission denied")) {
                 errorMsg = "Permission denied - check file permissions on /etc/config/blue-merle";
-            } else if (err.toString().includes("No such file")) {
-                errorMsg = "Config file missing - ensure /etc/config/blue-merle exists";
             } else if (err.toString().includes("Invalid")) {
                 errorMsg = "Invalid UCI configuration";
             }
@@ -541,16 +673,24 @@ function handleImeiModeChange(ev) {
     if (warningDiv) {
         warningDiv.style.display = currentImeiMode === 'static' ? 'block' : 'none';
     }
+    
+    hideImeiValidation();
+    updateSaveButtonState();
 }
 
 function handleStaticImeiChange(ev) {
     currentStaticImei = ev.target.value;
-    // Basic validation
-    var isValid = /^[0-9]{15}$/.test(currentStaticImei);
-    var saveButton = document.getElementById('save-config-button');
-    if (saveButton) {
-        saveButton.disabled = currentImeiMode === 'static' && !isValid;
+    
+    if (currentStaticImei.length >= 14) {
+        const validationResult = validateImei(currentStaticImei);
+        showImeiValidation(ev.target, validationResult);
+    } else {
+        // Reset styling for incomplete input
+        ev.target.className = ev.target.className.replace(/\b(error|warning|success)\b/g, '');
+        hideImeiValidation();
     }
+    
+    updateSaveButtonState();
 }
 
 function handleSaveImeiConfig(ev) {
@@ -558,16 +698,44 @@ function handleSaveImeiConfig(ev) {
         imei_mode: currentImeiMode
     };
     
+    var validationResult = null;
+    var imeiToSave = currentStaticImei;
+    
     if (currentImeiMode === 'static') {
-        if (!/^[0-9]{15}$/.test(currentStaticImei)) {
-            ui.addNotification(null, E('p', _('Error: Static IMEI must be exactly 15 digits')));
+        if (!currentStaticImei) {
+            ui.addNotification(null, E('p', _('Error: Please enter a static IMEI')));
             return;
         }
-        config.static_imei = currentStaticImei;
+        
+        // Validate the IMEI and get correction/completion if needed
+        validationResult = validateImei(currentStaticImei);
+        
+        // Block invalid IMEIs (wrong length, invalid characters)
+        if (!validationResult.valid && !validationResult.correctable && !validationResult.completable) {
+            ui.addNotification(null, E('p', _('Error: ') + validationResult.error));
+            return;
+        }
+        
+        // Use corrected/completed IMEI if available
+        if (validationResult.correctable || validationResult.completable) {
+            imeiToSave = validationResult.correctedImei;
+        }
+        
+        config.static_imei = imeiToSave;
     }
     
     writeUciConfig(config).then(function() {
-        ui.addNotification(null, E('p', _('IMEI configuration saved successfully!')));
+        // Show appropriate success message
+        if (validationResult && (validationResult.correctable || validationResult.completable)) {
+            if (validationResult.completable) {
+                ui.addNotification(null, E('p', _('14-digit IMEI completed and saved: ') + imeiToSave));
+            } else {
+                ui.addNotification(null, E('p', _('IMEI check digit corrected and saved: ') + imeiToSave));
+            }
+        } else {
+            ui.addNotification(null, E('p', _('IMEI configuration saved successfully!')));
+        }
+        hideImeiValidation();
     }).catch(function(err) {
         console.log("Error saving UCI config:", err);
         ui.addNotification(null, E('p', _('Error saving IMEI configuration: ') + err));
@@ -655,9 +823,8 @@ return view.extend({
                     E('input', { 
                         'id': 'static-imei-input',
                         'type': 'text', 
-                        'placeholder': _('Enter 15-digit IMEI (e.g. 351380441332807)'), 
+                        'placeholder': _('Enter 14 or 15-digit IMEI (e.g. 35674108123456)'), 
                         'maxlength': 15,
-                        'pattern': '[0-9]{15}',
                         'style': 'display: none;',
                         'input': handleStaticImeiChange
                     })
@@ -742,10 +909,18 @@ return view.extend({
                 if (staticInput) {
                     staticInput.value = currentStaticImei;
                     staticInput.style.display = currentImeiMode === 'static' ? 'block' : 'none';
+                    
+                    // Validate initial static IMEI if present
+                    if (currentImeiMode === 'static' && currentStaticImei.length >= 14) {
+                        const validationResult = validateImei(currentStaticImei);
+                        showImeiValidation(staticInput, validationResult);
+                    }
                 }
                 if (warningDiv) {
                     warningDiv.style.display = currentImeiMode === 'static' ? 'block' : 'none';
                 }
+                
+                updateSaveButtonState();
             }).catch(function(err) {
                 console.log("Could not load UCI config:", err);
             });
