@@ -42,33 +42,18 @@ fi
 rm -f /tmp/old_imsi
 
 # Read IMEI mode config from UCI config /etc/config/blue-merle
-IMEI_MODE="random"
-STATIC_IMEI=""
+IMEI_MODE=$(uci -q get blue-merle.imei.mode 2>/dev/null)
+STATIC_IMEI=$(uci -q get blue-merle.imei.static_value 2>/dev/null)
 
-# First, try to load the UCI config properly
-if [ -f /etc/config/blue-merle ]; then
-    # Use UCI commands to read the configuration
-    IMEI_MODE=$(uci -q get blue-merle.imei.mode 2>/dev/null || echo "random")
-    STATIC_IMEI=$(uci -q get blue-merle.imei.static_value 2>/dev/null || echo "")
-    
-    # Fallback to manual parsing if UCI fails
-    if [ -z "$IMEI_MODE" ] || [ "$IMEI_MODE" = "random" ]; then
-        # Try alternative parsing methods
-        if grep -q "option mode" /etc/config/blue-merle; then
-            IMEI_MODE=$(awk '/option mode/ {gsub(/['"'"']/, "", $3); print $3}' /etc/config/blue-merle)
-        fi
-        if grep -q "option static_value" /etc/config/blue-merle; then
-            STATIC_IMEI=$(awk '/option static_value/ {gsub(/['"'"']/, "", $3); print $3}' /etc/config/blue-merle)
-        fi
-    fi
-    
-    # Debug output
-    logger -p notice -t blue-merle-stage2 "Config file exists, IMEI_MODE='$IMEI_MODE', STATIC_IMEI='$STATIC_IMEI'"
-    mcu_send_message "Config: Mode=$IMEI_MODE"
+# Check if UCI read was successful and provide appropriate debug output
+if [ -z "$IMEI_MODE" ]; then
+    IMEI_MODE="random"
+    logger -p notice -t blue-merle-stage2 "Couldn't Load Blue-Merle UCI Config"
+    mcu_send_message "Defaulting to random mode"
     sleep 3
 else
-    logger -p notice -t blue-merle-stage2 "Config file /etc/config/blue-merle not found, using defaults"
-    mcu_send_message "No config file,  using random mode"
+    logger -p notice -t blue-merle-stage2 "Config loaded: IMEI_MODE='$IMEI_MODE', STATIC_IMEI='$STATIC_IMEI'"
+    mcu_send_message "Config: Mode=$IMEI_MODE"
     sleep 3
 fi
 

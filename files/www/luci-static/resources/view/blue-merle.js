@@ -241,7 +241,7 @@ var languages = ['en'];
 
 var currentDisplayMode = 'available', currentDisplayRows = [];
 
-// IMEI validation functions
+// IMEI validation functions - FIXED VERSION
 function calculateLuhnCheckDigit(baseImei) {
     let doubled = '';
     for (let i = 0; i < baseImei.length; i++) {
@@ -261,30 +261,52 @@ function calculateLuhnCheckDigit(baseImei) {
 }
 
 function validateImei(imei) {
-    if (!imei || imei.length !== 15) {
+    // Handle empty input
+    if (!imei) {
         return { valid: false, error: "IMEI must be exactly 15 digits" };
     }
     
-    if (!/^\d{15}$/.test(imei)) {
+    // Check if all characters are digits
+    if (!/^\d+$/.test(imei)) {
         return { valid: false, error: "IMEI must contain only digits" };
     }
     
-    const baseImei = imei.substring(0, 14);
-    const inputCheckDigit = parseInt(imei.charAt(14));
-    const correctCheckDigit = calculateLuhnCheckDigit(baseImei);
-    
-    if (inputCheckDigit === correctCheckDigit) {
-        return { valid: true };
-    } else {
-        const correctedImei = baseImei + correctCheckDigit;
+    // Handle different lengths
+    if (imei.length < 14) {
+        return { valid: false, error: "IMEI must be exactly 15 digits" };
+    } else if (imei.length === 14) {
+        // 14-digit IMEI - show completion message
+        const correctCheckDigit = calculateLuhnCheckDigit(imei);
+        const completedImei = imei + correctCheckDigit;
         return { 
             valid: false, 
-            correctable: true,
-            inputCheckDigit: inputCheckDigit,
+            completable: true,
             correctCheckDigit: correctCheckDigit,
-            correctedImei: correctedImei,
-            error: `Check digit should be ${correctCheckDigit}, not ${inputCheckDigit}. Correct IMEI: ${correctedImei}`
+            correctedImei: completedImei,
+            error: `Check digit should be ${correctCheckDigit}, not 4. Correct IMEI: ${completedImei}`
         };
+    } else if (imei.length === 15) {
+        // 15-digit IMEI - validate check digit
+        const baseImei = imei.substring(0, 14);
+        const inputCheckDigit = parseInt(imei.charAt(14));
+        const correctCheckDigit = calculateLuhnCheckDigit(baseImei);
+        
+        if (inputCheckDigit === correctCheckDigit) {
+            return { valid: true };
+        } else {
+            const correctedImei = baseImei + correctCheckDigit;
+            return { 
+                valid: false, 
+                correctable: true,
+                inputCheckDigit: inputCheckDigit,
+                correctCheckDigit: correctCheckDigit,
+                correctedImei: correctedImei,
+                error: `Check digit should be ${correctCheckDigit}, not ${inputCheckDigit}. Correct IMEI: ${correctedImei}`
+            };
+        }
+    } else {
+        // More than 15 digits
+        return { valid: false, error: "IMEI must be exactly 15 digits" };
     }
 }
 
@@ -294,7 +316,7 @@ function showImeiValidation(input, validationResult) {
     if (validationResult.valid) {
         input.className = input.className.replace(/\b(error|warning|success)\b/g, '') + ' success';
         if (validationDiv) validationDiv.style.display = 'none';
-    } else if (validationResult.correctable) {
+    } else if (validationResult.correctable || validationResult.completable) {
         input.className = input.className.replace(/\b(error|warning|success)\b/g, '') + ' warning';
         showImeiMessage(validationResult.error, 'warning');
     } else {
@@ -681,11 +703,12 @@ function handleImeiModeChange(ev) {
 function handleStaticImeiChange(ev) {
     currentStaticImei = ev.target.value;
     
-    if (currentStaticImei.length >= 14) {
+    // Only validate if there's actual input
+    if (currentStaticImei.length > 0) {
         const validationResult = validateImei(currentStaticImei);
         showImeiValidation(ev.target, validationResult);
     } else {
-        // Reset styling for incomplete input
+        // Reset styling for empty input
         ev.target.className = ev.target.className.replace(/\b(error|warning|success)\b/g, '');
         hideImeiValidation();
     }
@@ -911,7 +934,7 @@ return view.extend({
                     staticInput.style.display = currentImeiMode === 'static' ? 'block' : 'none';
                     
                     // Validate initial static IMEI if present
-                    if (currentImeiMode === 'static' && currentStaticImei.length >= 14) {
+                    if (currentImeiMode === 'static' && currentStaticImei.length > 0) {
                         const validationResult = validateImei(currentStaticImei);
                         showImeiValidation(staticInput, validationResult);
                     }
