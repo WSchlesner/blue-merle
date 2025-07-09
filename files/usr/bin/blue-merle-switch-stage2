@@ -39,7 +39,7 @@ if [ "$old_imsi" = "$new_imsi" ]; then
 	sleep 3
 fi
 
-rm -f /tmp/old_imsi
+shred -u /tmp/old_imsi
 
 # Read IMEI mode config from UCI config /etc/config/blue-merle
 IMEI_MODE=$(uci -q get blue-merle.imei.mode 2>/dev/null)
@@ -53,7 +53,7 @@ if [ -z "$IMEI_MODE" ]; then
     sleep 3
 else
     logger -p notice -t blue-merle-stage2 "Config loaded: IMEI_MODE='$IMEI_MODE', STATIC_IMEI='$STATIC_IMEI'"
-    mcu_send_message "Config: Mode=$IMEI_MODE"
+    mcu_send_message "IMEI Config: Mode=$IMEI_MODE"
     sleep 3
 fi
 
@@ -118,7 +118,7 @@ else
 	shred -u /root/esim/log.txt # unclear if the imei/imsi will be loged here, just a precaution
 fi
 
-rm -f /tmp/old_imei
+shred -u /tmp/old_imei
 
 mcu_send_message "The device will shutdown now."
 sleep 3
